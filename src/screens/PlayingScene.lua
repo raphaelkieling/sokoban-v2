@@ -138,13 +138,10 @@ end
 function PlayingScene:mapCameraTarget()
     if not self.board then return 0, 0, 1 end
     local width, height = love.graphics.getDimensions()
-    local minX, minY, maxX, maxY = self.board:getFilledBounds()
-    minX, minY = minX or 0, minY or 0
-    maxX, maxY = maxX or (self.board.width - 1), maxY or (self.board.height - 1)
-    local worldWidth = (maxX - minX + 1) * 64
-    local worldHeight = (maxY - minY + 1) * 64
-    local zoom = math.min((width - 80) / worldWidth, (height - 130) / worldHeight) * 0.94
-    return (minX + maxX + 1) * 32, (minY + maxY + 1) * 32, math.max(0.25, zoom)
+	local worldWidth = self.board.mapWorldWidth or self.board.width * 64
+	local worldHeight = self.board.mapWorldHeight or self.board.height * 64
+	local zoom = math.min(width / worldWidth, height / worldHeight)
+	return worldWidth / 2, worldHeight / 2, math.max(0.25, zoom)
 end
 
 function PlayingScene:cameraTarget()
@@ -208,6 +205,9 @@ function PlayingScene:update(dt)
 		end
 	end
 	self:updateChildren(dt)
+	if self.board then
+		self:emitPlayerSwitch(self.playerSelector:ensureLivingPlayer(self.board.players))
+	end
 end
 
 function PlayingScene:showMessage(messageKey, duration, ...)

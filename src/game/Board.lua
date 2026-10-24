@@ -129,6 +129,7 @@ function Board:addBonfire(x, y, tileset, state)
     object:addComponent(InteractiveObject())
     object:addComponent(Bonfire(self.assets, tileset, state))
     object:addComponent(FlameSource("Bonfire", "lit", 1))
+    object:addComponent(Sinkable())
     object:addComponent(self.assets:tilesetRenderer(tileset, 2, 1))
     return self:addObject(object)
 end

@@ -78,14 +78,6 @@ function SpriteRenderer:draw(context)
 	love.graphics.setColor(1, 1, 1, alpha)
 	animation:render(self.image, x, y, self.scale,
 		context and context.selected and self.outlineShader or nil, rotation, scaleX, scaleY)
-	if context and context.selected then
-		local pulse = (math.sin(love.timer.getTime() * 5) + 1) / 2
-		love.graphics.setColor(0.95, 0.84, 0.52, 0.2 + pulse * 0.25)
-		love.graphics.setLineWidth(1.5 + pulse)
-		love.graphics.ellipse("line", x, y + transform.cellSize * 0.28,
-			transform.cellSize * (0.31 + pulse * 0.025),
-			transform.cellSize * (0.105 + pulse * 0.012))
-	end
 	love.graphics.pop()
 end
 

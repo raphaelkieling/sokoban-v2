@@ -42,6 +42,7 @@ local function spawnPlayer(board, x, y, classId)
     player:addComponent(InteractiveObject())
     local character = Character()
     player:addComponent(character)
+    player:addComponent(Sinkable())
     local playerComponent = Player()
     character:addComponent(playerComponent)
     playerComponent:setClass(CharacterClasses.create(classId))
@@ -435,6 +436,59 @@ function tests.warrior_pushes_a_box_through_passthrough_when_it_can_land_on_floo
 		"pushed boxes should carry squash-and-stretch feedback during movement")
 end
 
+function tests.warrior_can_push_a_player_across_passthrough_onto_the_far_platform()
+	local board = makeBoard(0, 7, 0)
+	board:setCell(3, 0, {walkable = false, wall = false, passthrough = true})
+	board:setCell(4, 0, {walkable = false, wall = false, passthrough = true})
+	board:setCell(7, 0, {walkable = false, wall = true})
+	local warrior = spawnPlayer(board, 1, 0, Player.Classes.WARRIOR)
+	local wizard = spawnPlayer(board, 2, 0, Player.Classes.WIZARD)
+
+	assert(run(board, warrior, {x = 1, y = 0}))
+	assertPosition(warrior, 2, 0)
+	assertPosition(wizard, 6, 0)
+	assert(wizard:getComponent("Sinkable").state == "active" and wizard.active,
+		"a player pushed across the hole onto floor should remain active")
+end
+
+function tests.player_pushed_into_passthrough_sinks_and_undo_restores_them()
+	local board = makeBoard(0, 4, 0)
+	board:setCell(3, 0, {walkable = false, wall = false, passthrough = true})
+	board:setCell(4, 0, {walkable = false, wall = true})
+	local warrior = spawnPlayer(board, 1, 0, Player.Classes.WARRIOR)
+	local wizard = spawnPlayer(board, 2, 0, Player.Classes.WIZARD)
+	local history = ActionHistory()
+
+	assert(run(board, warrior, {x = 1, y = 0}, history))
+	assert(wizard:getComponent("Sinkable").state == "approaching" and wizard.active,
+		"a pushed player should travel to the hole before beginning to sink")
+	assert(wizard:getComponent("Transform"):isMoving())
+	wizard:update(0.13)
+	assert(wizard:getComponent("Sinkable").state == "sinking" and wizard.visualOnly,
+		"the fall should begin only after the player arrives at the hole")
+	wizard:update(wizard:getComponent("Sinkable").sinkDuration)
+	assert(wizard:getComponent("Sinkable").state == "lost" and not wizard.active,
+		"a finished fall should leave the player lost")
+	assert(history:undo())
+	assert(wizard.active and wizard:getComponent("Sinkable").state == "active",
+		"undo should restore the player from the hole")
+	assert(wizard:getComponent("Transform").tween,
+		"undo should animate the player back from the hole")
+end
+
+function tests.player_can_walk_into_passthrough_and_sink()
+	local board = makeBoard(0, 4, 0)
+	board:setCell(2, 0, {walkable = false, wall = false, passthrough = true})
+	local wizard = spawnPlayer(board, 1, 0, Player.Classes.WIZARD)
+
+	assert(run(board, wizard, {x = 1, y = 0}))
+	assert(wizard:getComponent("Sinkable").state == "approaching" and wizard.active,
+		"players should be allowed to step into a pit instead of treating it as a wall")
+	wizard:update(0.13)
+	assert(wizard:getComponent("Sinkable").state == "sinking",
+		"walking players should only start falling after reaching the pit")
+end
+
 function tests.warrior_marks_a_box_lost_if_the_push_stops_inside_passthrough()
 	local board = makeBoard(0, 4, 0)
 	board:setCell(3, 0, {walkable = false, wall = false, passthrough = true})
@@ -446,10 +500,12 @@ function tests.warrior_marks_a_box_lost_if_the_push_stops_inside_passthrough()
 	local history = ActionHistory()
 
 	assert(run(board, warrior, {x = 1, y = 0}, history))
-	assert(box:getComponent("Sinkable").state == "sinking")
-	assert(box.active == false and box.visualOnly,
-		"a box in passthrough should enter its own temporary sinking visual state")
+	assert(box:getComponent("Sinkable").state == "approaching" and box.active,
+		"the box should remain active while moving to the hole")
 	assertPosition(warrior, 2, 0)
+	box:update(0.13)
+	assert(box:getComponent("Sinkable").state == "sinking" and box.visualOnly,
+		"the box should begin falling after it reaches the hole")
 	box:update(0.4)
 	assert(box:getComponent("Sinkable").state == "lost" and not box.visualOnly,
 		"the box should finish sinking into its lost state")
@@ -475,8 +531,8 @@ function tests.sinkable_owns_and_advances_its_fall_state()
 		"the fall should start at the box's own origin")
 	sinkable:update(sinkable.sinkDuration / 2)
 	x, y, scale, alpha = sinkable:visualTransform()
-	assert(x > 96 and x < 160 and scale < 1 and alpha < 1,
-		"the component should interpolate its sprite into the destination")
+	assert(x == 96 and y > 32 and scale < 1 and alpha < 1,
+		"the component should shrink and drop its sprite into the hole")
 	sinkable:update(sinkable.sinkDuration)
 	assert(sinkable.state == "lost" and not box.visualOnly,
 		"the component should finish its own fall and stop rendering")
@@ -650,6 +706,17 @@ function tests.mysterious_priest_does_not_overlap_a_trailing_object_if_blocked()
     assertPosition(priest, 3, 2)
     assertPosition(blockedBox, 4, 2)
     assertPosition(trailingBox, 2, 2)
+end
+
+function tests.mysterious_priest_ignores_players_that_have_fallen()
+	local board = makeRectBoard(7, 5)
+	local priest = spawnPlayer(board, 3, 2, Player.Classes.MYSTERIOUS_PRIEST)
+	local lostPlayer = spawnPlayer(board, 4, 3, Player.Classes.WIZARD)
+	lostPlayer:getComponent("Sinkable"):setState("lost")
+
+	assert(run(board, priest, {x = 1, y = 0}))
+	assertPosition(priest, 4, 2)
+	assert(not lostPlayer.active)
 end
 
 function tests.mysterious_priest_does_not_move_objects_when_pushed_as_a_block()

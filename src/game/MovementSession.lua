@@ -50,6 +50,13 @@ function MovementSession:canWalk(x, y)
     return self.board:canWalk(x, y)
 end
 
+function MovementSession:canEnter(x, y, object)
+	if self:canWalk(x, y) then return true end
+	local cell = self.board:getCell(x, y)
+	return cell ~= nil and cell.passthrough == true
+		and object ~= nil and object:hasComponent("Sinkable")
+end
+
 function MovementSession:objectAt(x, y, except)
     for _, object in ipairs(self.board.objects) do
         local position = self.positions[object]
@@ -64,13 +71,13 @@ function MovementSession:moveObject(object, x, y)
 	local sinkable = object:getComponent("Sinkable")
 	if cell and cell.passthrough and sinkable then
 		local position = self.positions[object]
-		self:setComponentState(sinkable, "sinking", {
+		self:setComponentState(sinkable, "approaching", {
 			sinkX = x,
 			sinkY = y,
 			originX = position and position.x,
 			originY = position and position.y,
 		})
-		self.positions[object] = nil
+		self.positions[object] = {x = x, y = y}
 		return
 	end
     self.positions[object] = {x = x, y = y}
@@ -83,7 +90,7 @@ function MovementSession:markBlocked(object)
 end
 
 function MovementSession:enter(actor, x, y)
-    if not self:canWalk(x, y) then return false end
+    if not self:canEnter(x, y, actor) then return false end
     local blocker = self:objectAt(x, y, actor)
     if blocker then
         self:markBlocked(blocker)

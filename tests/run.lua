@@ -2,6 +2,8 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local suites = {
     {name = "character_movement", tests = require("tests.character_movement")},
+    {name = "player_selector", tests = require("tests.player_selector")},
+    {name = "camera_layout", tests = require("tests.camera_layout")},
     {name = "board_win_condition", tests = require("tests.board_win_condition")},
     {name = "target_component", tests = require("tests.target_component")},
     {name = "bonfire_component", tests = require("tests.bonfire_component")},

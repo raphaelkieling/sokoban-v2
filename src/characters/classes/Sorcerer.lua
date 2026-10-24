@@ -14,7 +14,7 @@ function Sorcerer:move(movement, actor, direction, destination)
         local recoilX = position.x - direction.x
         local recoilY = position.y - direction.y
         local destinationIsBlocked = recoilX == destination.x and recoilY == destination.y
-            or not movement:canWalk(recoilX, recoilY)
+			or not movement:canEnter(recoilX, recoilY, target)
             or movement:objectAt(recoilX, recoilY, actor)
         if destinationIsBlocked then
             movement:markBlocked(target)

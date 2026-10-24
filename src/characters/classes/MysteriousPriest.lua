@@ -13,7 +13,7 @@ function MysteriousPriest:move(movement, actor, direction, destination)
     for _, object in ipairs(movement.board.objects) do
         if object ~= actor and object:hasComponent("InteractiveObject") then
             local position = movement:position(object)
-            if math.abs(position.x - center.x) <= auraRadius
+            if position and math.abs(position.x - center.x) <= auraRadius
                 and math.abs(position.y - center.y) <= auraRadius then
                 affected[#affected + 1] = object
             end
@@ -35,7 +35,7 @@ function MysteriousPriest:move(movement, actor, direction, destination)
             trailingObjects[#trailingObjects + 1] = object
         else
             local blocker = movement:objectAt(nextX, nextY, object)
-            if movement:canWalk(nextX, nextY) and not blocker then
+			if movement:canEnter(nextX, nextY, object) and not blocker then
                 movement:moveObject(object, nextX, nextY)
             else
                 movement:markBlocked(blocker or object)

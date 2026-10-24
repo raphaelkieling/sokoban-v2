@@ -9,9 +9,15 @@ local function isCardinalDirection(direction)
 		or (math.abs(direction.y) == 1 and direction.x == 0))
 end
 
-local function startPlayerStates(changes, actor)
+local function startPlayerStates(changes, actor, componentChanges)
 	local anotherObjectMoved = false
 	for _, change in ipairs(changes) do
+		if change.object ~= actor then
+			anotherObjectMoved = true
+			break
+		end
+	end
+	for _, change in ipairs(componentChanges or {}) do
 		if change.object ~= actor then
 			anotherObjectMoved = true
 			break
@@ -51,7 +57,7 @@ function CharacterMovement:move(board, direction, history, effectSink)
 		y = actorPosition.y + direction.y,
 	}
 	local characterClass = actor:getComponent("CharacterClass")
-	if not movement:canWalk(destination.x, destination.y)
+	if not movement:canEnter(destination.x, destination.y, actor)
 		and not characterClass:canEnterBlockedTile(movement, destination, direction, actor) then
 		return false
 	end
@@ -64,16 +70,24 @@ function CharacterMovement:move(board, direction, history, effectSink)
 	end
 
 	local snapshots = {}
+	local sinkingObjects = {}
+	for _, change in ipairs(componentChanges) do
+		if change.component == "Sinkable" and change.state == "active" then
+			sinkingObjects[change.object] = true
+		end
+	end
 	for _, change in ipairs(changes) do
 		change.object:getComponent("Transform"):moveTo(change.toX, change.toY,
 			change.object ~= actor)
-		snapshots[#snapshots + 1] = {
-			object = change.object,
-			gridX = change.fromX,
-			gridY = change.fromY,
-			x = change.x,
-			y = change.y,
-		}
+		if not sinkingObjects[change.object] then
+			snapshots[#snapshots + 1] = {
+				object = change.object,
+				gridX = change.fromX,
+				gridY = change.fromY,
+				x = change.x,
+				y = change.y,
+			}
+		end
 	end
 	for _, change in ipairs(componentChanges) do
 		local snapshot = {}
@@ -82,7 +96,7 @@ function CharacterMovement:move(board, direction, history, effectSink)
 	end
 	if history then history:record(snapshots) end
 	if #changes > 0 then
-		startPlayerStates(changes, actor)
+		startPlayerStates(changes, actor, componentChanges)
 		local stateMachine = actor:getComponent("StateMachine")
 		if stateMachine then
 			stateMachine:dispatch("onMovement", {

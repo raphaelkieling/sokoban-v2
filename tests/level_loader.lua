@@ -39,6 +39,8 @@ function tests.passthrough_entity_marks_a_cell_and_overrides_collision_wall()
 		},
 		levels = {{
 			identifier = "Fixture",
+			pxWid = 96,
+			pxHei = 32,
 			layerInstances = {
 				{
 					layerDefUid = 3,
@@ -94,6 +96,8 @@ function tests.passthrough_entity_marks_a_cell_and_overrides_collision_wall()
 	assert(#board.triggers == 1 and board.triggers[1].name == "fixture_trigger",
 		"Trigger entities should be loaded as invisible board metadata")
 	assert(board.triggers[1].x == 0 and board.triggers[1].y == 0)
+	assert(board.mapWorldWidth == 192 and board.mapWorldHeight == 64,
+		"the board should retain LDtk world bounds in rendered world coordinates")
 end
 
 return tests

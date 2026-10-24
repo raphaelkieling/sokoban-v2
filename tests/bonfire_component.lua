@@ -10,6 +10,7 @@ local CharacterMovement = require("src.components.CharacterMovement")
 local CharacterClasses = require("src.characters.Classes")
 local ActionHistory = require("src.game.ActionHistory")
 local EventEmitter = require("src.core.EventEmitter")
+local Sinkable = require("src.components.Sinkable")
 
 local tests = {}
 
@@ -53,7 +54,78 @@ function tests.board_registers_bonfire_as_a_pushable_interactive_object()
 	local movement = MovementSession.new(board)
 
 	assert(bonfire:hasComponent("InteractiveObject"))
+	assert(bonfire:hasComponent("Sinkable"),
+		"bonfires should be able to cross holes during a long push")
 	assert(movement:objectAt(3, 4) == bonfire)
+end
+
+function tests.warrior_can_push_a_bonfire_across_passthrough_to_the_far_platform()
+	local assets = {
+		bonfireAnimation = function(_, _, state)
+			return {state = state, update = function() end}
+		end,
+		tilesetRenderer = function()
+			return SpriteRenderer({}, 2, 1)
+		end,
+	}
+	local board = Board(assets, 8, 1)
+	for x = 0, 7 do
+		board:setCell(x, 0, {walkable = x ~= 3 and x ~= 4, wall = x == 7,
+			passthrough = x == 3 or x == 4})
+	end
+	local fire = board:addBonfire(2, 0, {})
+	local warrior = GameObject("Warrior")
+	warrior:addComponent(Transform(1, 0, 64, 3))
+	warrior:addComponent(InteractiveObject())
+	warrior:addComponent(Player())
+	warrior:addComponent(CharacterClasses.create(Player.Classes.WARRIOR))
+	warrior:addComponent(CharacterMovement())
+	board:addObject(warrior)
+
+	local moved = warrior:getComponent("CharacterMovement"):move(
+		board, {x = 1, y = 0}, ActionHistory())
+	assert(moved)
+	assert(fire:getComponent("Transform").gridX == 6,
+		"the Warrior should be able to throw the bonfire across the hole onto the far floor")
+	assert(fire:getComponent("Sinkable").state == "active" and fire.active,
+		"a bonfire landing on floor should not fall into the hole")
+end
+
+function tests.bonfire_sinks_when_a_push_stops_in_a_hole_and_undo_restores_it()
+	local assets = {
+		bonfireAnimation = function(_, _, state)
+			return {state = state, update = function() end}
+		end,
+		tilesetRenderer = function()
+			return SpriteRenderer({}, 2, 1)
+		end,
+	}
+	local board = Board(assets, 4, 1)
+	for x = 0, 2 do board:setCell(x, 0, {walkable = true, wall = false}) end
+	board:setCell(3, 0, {walkable = false, wall = false, passthrough = true})
+	local fire = board:addBonfire(2, 0, {})
+	local warrior = GameObject("Warrior")
+	warrior:addComponent(Transform(1, 0, 64, 3))
+	warrior:addComponent(InteractiveObject())
+	warrior:addComponent(Player())
+	warrior:addComponent(CharacterClasses.create(Player.Classes.WARRIOR))
+	warrior:addComponent(CharacterMovement())
+	board:addObject(warrior)
+	local history = ActionHistory()
+
+	assert(warrior:getComponent("CharacterMovement"):move(
+		board, {x = 1, y = 0}, history))
+	assert(fire:getComponent("Sinkable").state == "approaching",
+		"the bonfire should move to the hole before it starts falling")
+	board:update(0.13)
+	assert(fire:getComponent("Sinkable").state == "sinking")
+	board:update(fire:getComponent("Sinkable").sinkDuration)
+	assert(fire:getComponent("Sinkable").state == "lost")
+
+	assert(history:undo())
+	assert(fire.active and fire:getComponent("Sinkable").state == "active")
+	assert(fire:getComponent("Transform").tween,
+		"undo should restore the bonfire from the hole")
 end
 
 local function makeFireBoard(state)

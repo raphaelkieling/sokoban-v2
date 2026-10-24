@@ -7,7 +7,7 @@ return {
     },
     levels = {
         title = "Selecionar fase",
-        page = "A/D ou ←/→  ·  Página %d/%d",
+        page = "A/D ou < / >  |  Página %d/%d",
     },
     settings = {
         title = "Configurações",

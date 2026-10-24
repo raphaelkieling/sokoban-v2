@@ -352,6 +352,9 @@ function LevelLoader.load(path, assets, events, levelIdentifier)
 	assert(gridSize and gridSize > 0, "LDtk Collision layer has invalid grid size")
 	local grassEntities = collectGrassEntities(level, gridSize, collision.__cWid, collision.__cHei)
 	loadCollision(project, level, board, grassEntities)
+	local worldScale = 64 / gridSize
+	board.mapWorldWidth = (level.pxWid or board.width * gridSize) * worldScale
+	board.mapWorldHeight = (level.pxHei or board.height * gridSize) * worldScale
 	loadRenderLayers(project, path, level, gridSize, board)
 	loadPassthroughEntities(level, gridSize, board)
 	loadEntities(level, gridSize, board)

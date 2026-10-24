@@ -10,7 +10,7 @@ function Telekinetic:move(movement, actor, direction, destination)
     if target then
         local position = movement:position(target)
         local beyondX, beyondY = position.x + direction.x, position.y + direction.y
-        if not movement:canWalk(beyondX, beyondY) then
+		if not movement:canEnter(beyondX, beyondY, target) then
             movement:markBlocked(target)
             return movement:enter(actor, destination.x, destination.y)
         end
