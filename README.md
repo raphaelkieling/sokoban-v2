@@ -28,4 +28,4 @@ On macOS, with `curl`, `zip`, and `ditto` available:
 ./scripts/build-desktop.sh
 ```
 
-This creates a Windows x64 folder/ZIP and a macOS `.app`/ZIP under `dist/desktop/`. To create only one platform, pass `windows` or `macos`. The script packages the game with the official LÖVE 11.5 runtimes and disables the development console in release builds.
+This creates a Windows x64 folder/ZIP and a macOS `.app`/ZIP under `dist/desktop/`. To create only one platform, pass `windows` or `macos`.

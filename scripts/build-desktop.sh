@@ -25,8 +25,10 @@ if [[ "$TARGET" != "all" && "$TARGET" != "windows" && "$TARGET" != "macos" ]]; t
 fi
 
 mkdir -p "$GAME_DIR" "$CACHE_DIR" "$BUILD_ROOT"
-cp -R "$ROOT_DIR/assets" "$ROOT_DIR/maps" "$ROOT_DIR/src" "$ROOT_DIR/vendor" \
+cp -R "$ROOT_DIR/assets" "$ROOT_DIR/src" "$ROOT_DIR/vendor" \
 	"$ROOT_DIR/main.lua" "$ROOT_DIR/conf.lua" "$GAME_DIR/"
+mkdir -p "$GAME_DIR/maps-v2"
+cp "$ROOT_DIR/maps-v2/Map.ldtk" "$GAME_DIR/maps-v2/Map.ldtk"
 
 # Keep developer-only console and overlays out of distributed builds.
 sed 's/developmentMode = true/developmentMode = false/' \
@@ -67,6 +69,7 @@ build_windows() {
 	rm -rf "$output_dir"
 	mkdir -p "$output_dir"
 	cp -R "$package_dir"/. "$output_dir/"
+	rm -f "$BUILD_ROOT/$GAME_SLUG-windows-x64.zip"
 	(cd "$output_dir" && zip -9 -qr "$BUILD_ROOT/$GAME_SLUG-windows-x64.zip" .)
 	echo "Windows x64 build: $BUILD_ROOT/$GAME_SLUG-windows-x64.zip"
 }
@@ -95,6 +98,7 @@ build_macos() {
 	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $GAME_BUNDLE_ID" "$plist"
 	/usr/libexec/PlistBuddy -c "Set :CFBundleName $GAME_NAME" "$plist"
 	/usr/libexec/PlistBuddy -c 'Delete :UTExportedTypeDeclarations' "$plist" >/dev/null 2>&1 || true
+	rm -f "$BUILD_ROOT/$GAME_SLUG-macos.zip"
 	ditto -c -k --sequesterRsrc --keepParent "$app_path" \
 		"$BUILD_ROOT/$GAME_SLUG-macos.zip"
 	echo "macOS app: $app_path"
