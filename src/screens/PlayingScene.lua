@@ -7,6 +7,8 @@ local LevelLoader = require("src.game.LevelLoader")
 local Keymap = require("src.settings.Keymap")
 local UndoHistoryOverlay = require("src.dev.UndoHistoryOverlay")
 local PlayingHud = require("src.screens.PlayingHud")
+local DiagonalWipe = require("src.ui.DiagonalWipe")
+local I18n = require("src.i18n.I18n")
 local PlayingStates = {
 	entering = require("src.screens.playing_states.Entering"),
 	playing = require("src.screens.playing_states.Playing"),
@@ -162,6 +164,11 @@ end
 function PlayingScene:loadNextLevel()
 	self.levelIndex = self.levelIndex + 1
 	self:loadLevel()
+end
+
+function PlayingScene:restartLevel()
+	self.pendingTransitionLevelIndex = self.levelIndex
+	self.states:change("transitioning")
 end
 
 function PlayingScene:jumpToLevel(index, levels)
@@ -356,14 +363,13 @@ function PlayingScene:draw()
     end
     self.camera:detach()
 
-    if self.transition then
-        local progress = self.transition.elapsed / self.transition.duration
-        local alpha = math.sin(math.min(progress, 1) * math.pi)
-        love.graphics.setColor(0, 0, 0, alpha * 0.35)
-        love.graphics.rectangle("fill", 0, 0, love.graphics.getDimensions())
-    end
     self:drawChildren("screen", self)
     if undoPaths then UndoHistoryOverlay.drawLegend(undoPaths) end
+    if self.transition then
+        local progress = self.transition.elapsed / self.transition.duration
+        local coverage = progress <= 0.5 and progress * 2 or (1 - progress) * 2
+        DiagonalWipe.draw(coverage)
+    end
 end
 
 function PlayingScene:mobileAction(action)
@@ -399,15 +405,18 @@ end
 
 function PlayingScene:getPauseOptions(completed)
     if completed == nil then completed = self.states:is("completed") end
-    if completed then return {"Replay level", "Level select", "Main menu", "Quit"} end
-    return {"Resume", "Restart level", "Level select", "Main menu", "Quit"}
+    if completed then
+        return {I18n.t("pause.replay"), I18n.t("pause.level_select"),
+            I18n.t("pause.main_menu"), I18n.t("pause.quit")}
+    end
+    return {I18n.t("pause.resume"), I18n.t("pause.restart"),
+        I18n.t("pause.level_select"), I18n.t("pause.main_menu"), I18n.t("pause.quit")}
 end
 
 function PlayingScene:choosePauseOption(completed)
     if completed then
         if self.pauseSelection == 1 then
-            self:loadLevel()
-            self.states:change("entering")
+            self:restartLevel()
         elseif self.pauseSelection == 2 then
             self.game.scenes:switch("levels")
         elseif self.pauseSelection == 3 then
@@ -420,8 +429,7 @@ function PlayingScene:choosePauseOption(completed)
     if self.pauseSelection == 1 then
         self.states:change("playing")
     elseif self.pauseSelection == 2 then
-        self:loadLevel()
-        self.states:change("entering")
+        self:restartLevel()
     elseif self.pauseSelection == 3 then
         self.game.scenes:switch("levels")
     elseif self.pauseSelection == 4 then

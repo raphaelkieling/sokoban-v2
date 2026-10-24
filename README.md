@@ -29,5 +29,3 @@ On macOS, with `curl`, `zip`, and `ditto` available:
 ```
 
 This creates a Windows x64 folder/ZIP and a macOS `.app`/ZIP under `dist/desktop/`. To create only one platform, pass `windows` or `macos`. The script packages the game with the official LÖVE 11.5 runtimes and disables the development console in release builds.
-
-The macOS app is not signed or notarized; a public release may need an Apple Developer ID signature and notarization to avoid Gatekeeper warnings.

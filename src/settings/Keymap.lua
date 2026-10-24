@@ -12,6 +12,8 @@ local Keymap = {
         cancel = {"escape"},
         menuUp = {"up", "w"},
         menuDown = {"down", "s"},
+        menuPagePrevious = {"left", "a"},
+        menuPageNext = {"right", "d"},
     },
 
     labels = {

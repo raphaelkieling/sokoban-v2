@@ -33,4 +33,20 @@ function tests.mute_toggle_updates_all_audio_sources()
 	_G.love = previousLove
 end
 
+function tests.music_volume_controls_only_registered_music_sources()
+	local previousLove = love
+	_G.love = {audio = {}}
+	local manager = AudioManager.new({})
+	local source = {setVolume = function(self, volume) self.volume = volume end}
+	manager:registerMusicSource(source, 0.8)
+	assert(math.abs(source.volume - 0.6) < 0.000001)
+	manager:setMusicVolume(0.25)
+	assert(math.abs(source.volume - 0.2) < 0.000001)
+	manager:setMuted(true)
+	assert(source.volume == 0)
+	manager:setMuted(false)
+	assert(math.abs(source.volume - 0.2) < 0.000001)
+	_G.love = previousLove
+end
+
 return tests

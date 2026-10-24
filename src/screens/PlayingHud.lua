@@ -1,6 +1,7 @@
 local Node = require("src.core.Node")
 local BuildConfig = require("src.settings.BuildConfig")
 local UI = require("src.ui.Theme")
+local I18n = require("src.i18n.I18n")
 
 local PlayingHud = Node:extend()
 
@@ -77,30 +78,22 @@ function PlayingHud:drawPause(completed)
 	love.graphics.setColor(0, 0, 0, 0.78)
 	love.graphics.rectangle("fill", 0, 0, width, height)
 	local options = scene:getPauseOptions(completed)
-	local panelWidth = math.min(width - 36 * scale, 360 * scale)
-	local rowHeight = 38 * scale
-	local headerHeight = completed and 36 * scale or 0
-	local panelHeight = 12 * scale + headerHeight + #options * rowHeight
-	local panelX, panelY = (width - panelWidth) / 2, (height - panelHeight) / 2
-	UI.drawPanel(panelX, panelY, panelWidth, panelHeight)
-
+	local rowHeight = 46 * scale
+	local headerHeight = completed and 48 * scale or 0
+	local listHeight = #options * rowHeight
+	local firstRowY = (height - listHeight - headerHeight) / 2 + headerHeight
 	if completed then
-		UI.setColor("accent")
-		UI.setFont(24, width, height)
-		love.graphics.printf("ALL LEVELS COMPLETE", panelX + 12 * scale,
-			panelY + 5 * scale, panelWidth - 24 * scale, "center")
+		UI.setColor("text")
+		UI.setMenuFont(34, width, height)
+		love.graphics.printf(string.upper(I18n.t("pause.all_complete")), 0,
+			firstRowY - headerHeight - 8 * scale,
+			width, "center")
 	end
 
-	local firstRowY = panelY + 6 * scale + headerHeight
 	for index, label in ipairs(options) do
 		local y = firstRowY + (index - 1) * rowHeight
-		if index == scene.pauseSelection then
-			UI.drawSelection(panelX + 10 * scale, y, panelWidth - 20 * scale, 34 * scale)
-		end
-		UI.setColor(index == scene.pauseSelection and "accent" or "text")
-		UI.setFont(26, width, height)
-		love.graphics.print((index == scene.pauseSelection and "> " or "  ") .. label,
-			panelX + 20 * scale, y + 2 * scale)
+		UI.drawMenuItem(label, index == scene.pauseSelection, y,
+			width, height, 29, width * 0.55)
 	end
 end
 

@@ -55,11 +55,19 @@ local function createSource(definition)
     return love.audio.newSource(synthesize(definition.synthesis))
 end
 
-function AudioManager.new(catalog)
+function AudioManager.new(catalog, preferences)
+    local muted = AudioConfig.muted == true
+    local musicVolume = AudioConfig.musicVolume or 1
+    if preferences then
+        muted = preferences:get("muted") == true
+        musicVolume = preferences:get("musicVolume") or musicVolume
+    end
     local self = setmetatable({
         sources = {},
+        musicSources = {},
         volume = math.max(0, math.min(1, AudioConfig.volume)),
-        muted = AudioConfig.muted == true,
+        musicVolume = math.max(0, math.min(1, musicVolume)),
+        muted = muted,
     }, AudioManager)
     for name, definition in pairs(catalog or SoundCatalog) do
         local source = createSource(definition)
@@ -79,6 +87,17 @@ function AudioManager:_applyVolume(pool)
     for _, source in ipairs(pool.sources) do source:setVolume(volume) end
 end
 
+function AudioManager:_applyMusicVolume(entry)
+    entry.source:setVolume(entry.baseVolume * (self.muted and 0 or self.musicVolume))
+end
+
+function AudioManager:registerMusicSource(source, baseVolume)
+    local entry = {source = source, baseVolume = baseVolume or 1}
+    self.musicSources[#self.musicSources + 1] = entry
+    self:_applyMusicVolume(entry)
+    return source
+end
+
 function AudioManager:getVolume()
     return self.volume
 end
@@ -88,6 +107,15 @@ function AudioManager:setVolume(volume)
     for _, pool in pairs(self.sources) do self:_applyVolume(pool) end
 end
 
+function AudioManager:getMusicVolume()
+    return self.musicVolume
+end
+
+function AudioManager:setMusicVolume(volume)
+    self.musicVolume = math.max(0, math.min(1, tonumber(volume) or self.musicVolume))
+    for _, entry in ipairs(self.musicSources) do self:_applyMusicVolume(entry) end
+end
+
 function AudioManager:isMuted()
     return self.muted
 end
@@ -95,6 +123,7 @@ end
 function AudioManager:setMuted(muted)
     self.muted = muted == true
     for _, pool in pairs(self.sources) do self:_applyVolume(pool) end
+    for _, entry in ipairs(self.musicSources) do self:_applyMusicVolume(entry) end
 end
 
 function AudioManager:toggleMuted()
