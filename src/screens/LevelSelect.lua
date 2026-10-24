@@ -32,10 +32,8 @@ function LevelSelect:draw()
     for index = firstVisible, lastVisible do
         local level = self.levels[index]
         local label = level.name or string.format("lvl_%d.txt", level.number)
-        local number = string.format("%02d", index)
-        UI.drawMenuItem(number .. "   /   " .. label, index == self.selected,
-            rowY + (index - firstVisible) * rowHeight, width, height, 27,
-            selectorWidth, selectorWidth)
+		UI.drawTwoColumnMenuItem(label, "", index == self.selected,
+			rowY + (index - firstVisible) * rowHeight, width, height, 27, selectorWidth)
 
         if self.game.levelProgress:isCompleted(level.key or level.path) then
             local x = width / 2 + selectorWidth / 2 - 13 * scale

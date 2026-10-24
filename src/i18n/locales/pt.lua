@@ -2,12 +2,23 @@ return {
     menu = {
         play = "Jogar",
         settings = "Configurações",
+        analytics = "Estatísticas",
         credits = "Créditos",
         quit = "Sair",
     },
     levels = {
         title = "Selecionar fase",
         page = "A/D ou < / >  |  Página %d/%d",
+    },
+    analytics = {
+        title = "Estatísticas",
+        sessions = "Sessões",
+        steps = "Passos dados",
+        undos = "Usos do desfazer",
+        levels_started = "Fases iniciadas",
+        levels_completed = "Fases completas",
+        completion = "Conclusão",
+        back = "Voltar",
     },
     settings = {
         title = "Configurações",

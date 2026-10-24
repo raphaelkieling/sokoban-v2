@@ -10,12 +10,14 @@ local suites = {
     {name = "level_loader", tests = require("tests.level_loader")},
     {name = "triggers", tests = require("tests.triggers")},
     {name = "level_progress", tests = require("tests.level_progress")},
+    {name = "analytics", tests = require("tests.analytics")},
     {name = "console_commands", tests = require("tests.console_commands")},
     {name = "audio_manager", tests = require("tests.audio_manager")},
     {name = "scene_manager", tests = require("tests.scene_manager")},
     {name = "preferences", tests = require("tests.preferences")},
     {name = "i18n", tests = require("tests.i18n")},
     {name = "settings_screen", tests = require("tests.settings_screen")},
+    {name = "main_menu", tests = require("tests.main_menu")},
 }
 local passed, failed = 0, 0
 

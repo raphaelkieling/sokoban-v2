@@ -2,12 +2,23 @@ return {
     menu = {
         play = "Play",
         settings = "Settings",
+        analytics = "Analytics",
         credits = "Credits",
         quit = "Quit",
     },
     levels = {
         title = "Select level",
         page = "A/D or < / >  |  Page %d/%d",
+    },
+    analytics = {
+        title = "Analytics",
+        sessions = "Sessions",
+        steps = "Steps taken",
+        undos = "Undo actions",
+        levels_started = "Levels started",
+        levels_completed = "Levels completed",
+        completion = "Completion",
+        back = "Back",
     },
     settings = {
         title = "Settings",

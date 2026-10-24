@@ -54,6 +54,35 @@ function Theme.drawMenuItem(label, selected, centerY, width, height, fontSize, m
         itemWidth, "center")
 end
 
+function Theme.drawTwoColumnMenuItem(leftLabel, rightLabel, selected, centerY,
+	width, height, fontSize, fixedWidth)
+	Theme.setMenuFont(fontSize, width, height)
+	local font = love.graphics.getFont()
+	local scale = Theme.scale(width, height)
+	local itemWidth = math.min(fixedWidth or width * 0.72, width * 0.9)
+	local itemHeight = math.max(font:getHeight() + 6 * scale, 34 * scale)
+	local x = (width - itemWidth) / 2
+	local y = centerY - itemHeight / 2
+	local padding = 16 * scale
+	local textY = y + (itemHeight - font:getHeight()) / 2
+
+	if selected then
+		love.graphics.setColor(Theme.colors.selected)
+		love.graphics.rectangle("fill", x, y, itemWidth, itemHeight,
+			2 * scale, 2 * scale, 4)
+	end
+	love.graphics.setColor(selected and Theme.colors.selectedText or Theme.colors.text)
+	if rightLabel == nil or rightLabel == "" then
+		love.graphics.printf(string.upper(leftLabel or ""), x + padding, textY,
+			itemWidth - padding * 2, "left")
+	else
+		love.graphics.printf(string.upper(leftLabel or ""), x + padding, textY,
+			itemWidth * 0.68 - padding, "left")
+		love.graphics.printf(string.upper(tostring(rightLabel)),
+			x + itemWidth * 0.68, textY, itemWidth * 0.32 - padding, "right")
+	end
+end
+
 function Theme.drawPanel(x, y, width, height)
     love.graphics.push("all")
     Theme.setColor("panel")
@@ -74,10 +103,10 @@ function Theme.drawSelection(x, y, width, height)
     love.graphics.pop()
 end
 
-function Theme.drawDivider(x, y, width)
+function Theme.drawDivider(x, y, width, lineWidth)
     love.graphics.push("all")
     Theme.setColor("muted", 0.85)
-    love.graphics.setLineWidth(2)
+	love.graphics.setLineWidth(lineWidth or 2)
     love.graphics.line(x, y, x + width, y)
     love.graphics.pop()
 end

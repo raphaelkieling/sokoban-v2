@@ -260,6 +260,7 @@ function PlayingScene:movePlayer(direction)
 		directionX = direction.x,
 		directionY = direction.y,
 		moved = moved,
+		stepTaken = moved == true and changes ~= nil and #changes > 0,
 	})
 	self.game.audio:play(moved and "move" or "invalidMovement")
 	if moved and hasBoxArrivedOnTarget(self.board, previousBoxesOnTargets) then

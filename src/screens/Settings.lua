@@ -79,26 +79,23 @@ function Settings:draw()
         height * 0.12, width, "center")
 
     local volume = self.game.audio:getMusicVolume()
-    local filled = math.floor(volume * 10 + 0.5)
-    local meter = string.rep("#", filled) .. string.rep("-", 10 - filled)
     local languageKey = "settings.language_" .. (self.game.preferences:get("language") or "pt")
-    local options = {
-        string.format("%s: %s", I18n.t("settings.fullscreen"),
-            I18n.t(love.window.getFullscreen() and "settings.on" or "settings.off")),
-        string.format("%s  [%s]  %d%%", I18n.t("settings.music_volume"),
-            meter, math.floor(volume * 100 + 0.5)),
-        string.format("%s: %s", I18n.t("settings.muted"),
-            I18n.t(self.game.audio:isMuted() and "settings.on" or "settings.off")),
-        string.format("%s: %s", I18n.t("settings.language"), I18n.t(languageKey)),
-        I18n.t("settings.back"),
+	local options = {
+		{I18n.t("settings.fullscreen"), I18n.t(love.window.getFullscreen()
+			and "settings.on" or "settings.off")},
+		{I18n.t("settings.music_volume"), string.format("%d%%",
+			math.floor(volume * 100 + 0.5))},
+		{I18n.t("settings.muted"), I18n.t(self.game.audio:isMuted()
+			and "settings.on" or "settings.off")},
+		{I18n.t("settings.language"), I18n.t(languageKey)},
+		{I18n.t("settings.back"), ""},
     }
     local firstRowY = height * 0.37
     local rowSpacing = 48 * scale
     local selectorWidth = math.min(width * 0.76, 620 * scale)
-    for index, label in ipairs(options) do
-        UI.drawMenuItem(label, index == self.selected,
-            firstRowY + (index - 1) * rowSpacing, width, height, 29,
-            selectorWidth, selectorWidth)
+	for index, option in ipairs(options) do
+		UI.drawTwoColumnMenuItem(option[1], option[2], index == self.selected,
+			firstRowY + (index - 1) * rowSpacing, width, height, 29, selectorWidth)
     end
 
     UI.setColor("muted")

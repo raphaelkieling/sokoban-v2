@@ -9,7 +9,7 @@ local MainMenu = Scene:extend()
 function MainMenu:init(game)
     Scene.init(self, "MainMenu", game)
     self.selected = 1
-    self.options = {"menu.play", "menu.settings", "menu.credits", "menu.quit"}
+    self.options = {"menu.play", "menu.settings", "menu.analytics", "menu.credits", "menu.quit"}
 end
 
 function MainMenu:draw()
@@ -47,6 +47,8 @@ function MainMenu:keypressed(key)
         elseif self.selected == 2 then
             self.game.scenes:switch("settings")
         elseif self.selected == 3 then
+            self.game.scenes:switch("analytics")
+        elseif self.selected == 4 then
             self.game.scenes:switch("about")
         else
             love.event.quit()
