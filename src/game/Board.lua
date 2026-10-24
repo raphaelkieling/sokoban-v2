@@ -25,6 +25,7 @@ function Board:init(assets, width, height)
     self.objects = {}
     self.players = {}
     self.boxes = {}
+    self.triggers = {}
     self.targets = {}
     self.targetObjects = {}
     self.renderTiles = {}
@@ -104,6 +105,22 @@ function Board:addTarget(x, y, tileId)
     self.targetObjects[#self.targetObjects + 1] = object
     self:addChild(object)
     return object
+end
+
+function Board:addTrigger(name, x, y)
+	local trigger = {name = name, x = x, y = y}
+	self.triggers[#self.triggers + 1] = trigger
+	return trigger
+end
+
+function Board:getTriggersAt(x, y)
+	local matches = {}
+	for _, trigger in ipairs(self.triggers) do
+		if trigger.x == x and trigger.y == y then
+			matches[#matches + 1] = trigger
+		end
+	end
+	return matches
 end
 
 function Board:addBonfire(x, y, tileset, state)

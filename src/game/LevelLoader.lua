@@ -28,10 +28,40 @@ local function readProject(path)
 	return project
 end
 
+local function getField(instance, identifier)
+	for _, field in ipairs(instance.fieldInstances or {}) do
+		if field.__identifier == identifier then return field.__value end
+	end
+end
+
 function LevelLoader.listLevels()
 	local project = readProject(MAP_PATH)
-	local levels = {}
+	local orderedLevels = {}
 	for index, level in ipairs(project.levels) do
+		local order = getField(level, "Order")
+		assert(type(order) == "number", string.format(
+			"LDtk level %s must have a numeric Order field", tostring(level.identifier)))
+		orderedLevels[#orderedLevels + 1] = {
+			level = level,
+			order = order,
+			projectIndex = index,
+		}
+	end
+	table.sort(orderedLevels, function(a, b)
+		if a.order == b.order then
+			return a.projectIndex < b.projectIndex
+		end
+		return a.order < b.order
+	end)
+
+	local levels = {}
+	local previousOrder
+	for index, entry in ipairs(orderedLevels) do
+		local level = entry.level
+		assert(entry.order ~= previousOrder, string.format(
+			"LDtk levels must have unique Order values; duplicate Order %s at %s",
+			tostring(entry.order), tostring(level.identifier)))
+		previousOrder = entry.order
 		levels[#levels + 1] = {
 			number = index - 1,
 			name = level.identifier,
@@ -46,12 +76,6 @@ end
 local function levelLayer(level, identifier)
 	for _, layer in ipairs(level.layerInstances or {}) do
 		if layer.__identifier == identifier then return layer end
-	end
-end
-
-local function getField(entity, identifier)
-	for _, field in ipairs(entity.fieldInstances or {}) do
-		if field.__identifier == identifier then return field.__value end
 	end
 end
 
@@ -295,6 +319,14 @@ local function loadEntities(level, gridSize, board)
 		elseif entity.__identifier == "Bonfire" then
 			assert(board:canWalk(x, y), string.format("bonfire in %s must be on walkable ground", level.identifier))
 			board:addBonfire(x, y, BONFIRE_TILESET)
+		elseif entity.__identifier == "Trigger" then
+			local triggerName = getField(entity, "TriggerName")
+			assert(type(triggerName) == "string" and triggerName ~= "", string.format(
+				"Trigger in %s must have a non-empty TriggerName", level.identifier))
+			assert(x >= 0 and y >= 0 and x < board.width and y < board.height
+				and board:canWalk(x, y), string.format(
+				"Trigger %s in %s must be on walkable ground", triggerName, level.identifier))
+			board:addTrigger(triggerName, x, y)
 		end
 	end
 end

@@ -42,4 +42,9 @@ return {
         quit = "Quit",
         all_complete = "All levels complete",
     },
+    tutorial = {
+        first_tutorial = "Use the directional keys to push the box onto the pressure plate.",
+        undo = "Press %s or the undo button to rewind time.",
+        change_player = "Press %s to cycle through characters, or hold %s and press a direction to choose one.",
+    },
 }

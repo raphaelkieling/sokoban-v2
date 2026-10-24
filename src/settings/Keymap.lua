@@ -31,6 +31,16 @@ function Keymap.matches(action, key)
     return false
 end
 
+function Keymap.label(action)
+    local bindings = Keymap.bindings[action] or {}
+    if #bindings == 0 then return Keymap.labels[action] or action end
+    local labels = {}
+    for _, binding in ipairs(bindings) do
+        labels[#labels + 1] = string.upper(binding)
+    end
+    return table.concat(labels, "/")
+end
+
 function Keymap.direction(key)
     local directions = {
         {action = "moveUp", x = 0, y = -1},

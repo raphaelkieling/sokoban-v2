@@ -2,6 +2,7 @@ local Node = require("src.core.Node")
 local BuildConfig = require("src.settings.BuildConfig")
 local UI = require("src.ui.Theme")
 local I18n = require("src.i18n.I18n")
+local unpackValues = table.unpack or unpack
 
 local PlayingHud = Node:extend()
 
@@ -18,9 +19,30 @@ function PlayingHud:draw()
 	local completed = scene.states:is("completed")
 	if not paused and not completed then self:drawLevelTimeline() end
 	if paused or completed then self:drawPause(completed) end
+	if not paused and not completed then self:drawActiveMessage() end
 	self:drawDevelopmentFilename()
 	scene.mobileControls:draw()
 	self:drawChildren("screen", scene)
+end
+
+function PlayingHud:drawActiveMessage()
+	local scene = self.scene
+	if not scene.activeMessage then return end
+	local width, height = love.graphics.getDimensions()
+	local scale = UI.scale(width, height)
+	local textWidth = math.min(width - 48 * scale, 900 * scale)
+	local text = I18n.t(scene.activeMessage, unpackValues(scene.activeMessageArgs or {}))
+	UI.setMenuFont(25, width, height)
+	local x = (width - textWidth) / 2
+	local y = 38 * scale
+
+	love.graphics.push("all")
+	-- A small dark shadow keeps white text readable over bright tiles, without a panel.
+	love.graphics.setColor(0.025, 0.02, 0.035, 0.9)
+	love.graphics.printf(text, x + 2 * scale, y + 2 * scale, textWidth, "center")
+	love.graphics.setColor(1, 1, 1, 1)
+	love.graphics.printf(text, x, y, textWidth, "center")
+	love.graphics.pop()
 end
 
 function PlayingHud:drawDevelopmentFilename()

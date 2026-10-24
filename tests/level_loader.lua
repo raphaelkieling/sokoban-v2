@@ -3,6 +3,24 @@ local LevelLoader = require("src.game.LevelLoader")
 
 local tests = {}
 
+function tests.list_levels_uses_ldtk_order_field()
+	local project = {levels = {
+		{identifier = "Later", fieldInstances = {{__identifier = "Order", __value = 20}}},
+		{identifier = "First", fieldInstances = {{__identifier = "Order", __value = 1}}},
+		{identifier = "Middle", fieldInstances = {{__identifier = "Order", __value = 10}}},
+	}}
+	local previousLove = rawget(_G, "love")
+	_G.love = {filesystem = {read = function() return json.encode(project) end}}
+	local ok, levels = pcall(LevelLoader.listLevels)
+	_G.love = previousLove
+	assert(ok, levels)
+	assert(levels[1].identifier == "First")
+	assert(levels[2].identifier == "Middle")
+	assert(levels[3].identifier == "Later")
+	assert(levels[1].number == 0 and levels[3].number == 2,
+		"display numbering should follow the sorted sequence")
+end
+
 function tests.passthrough_entity_marks_a_cell_and_overrides_collision_wall()
 	local project = {
 		defs = {
@@ -29,7 +47,14 @@ function tests.passthrough_entity_marks_a_cell_and_overrides_collision_wall()
 					__cWid = 3,
 					__cHei = 1,
 					__gridSize = 32,
-					entityInstances = {{__identifier = "Passthrough", px = {32, 0}}},
+					entityInstances = {
+						{__identifier = "Passthrough", px = {32, 0}},
+						{
+							__identifier = "Trigger",
+						px = {0, 0},
+						fieldInstances = {{__identifier = "TriggerName", __value = "fixture_trigger"}},
+						},
+					},
 				},
 				{
 					layerDefUid = 2,
@@ -66,6 +91,9 @@ function tests.passthrough_entity_marks_a_cell_and_overrides_collision_wall()
 		"Passthrough should be blocked for walking and override the collision wall")
 	assert(board:getCell(2, 0) == nil,
 		"an empty Ground cell without a Passthrough entity should remain void")
+	assert(#board.triggers == 1 and board.triggers[1].name == "fixture_trigger",
+		"Trigger entities should be loaded as invisible board metadata")
+	assert(board.triggers[1].x == 0 and board.triggers[1].y == 0)
 end
 
 return tests

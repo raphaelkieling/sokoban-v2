@@ -4,6 +4,7 @@ local StateMachine = require("src.core.StateMachine")
 local ActionHistory = require("src.game.ActionHistory")
 local PlayerSelector = require("src.game.PlayerSelector")
 local LevelLoader = require("src.game.LevelLoader")
+local TriggerRegistry = require("src.game.TriggerRegistry")
 local Keymap = require("src.settings.Keymap")
 local UndoHistoryOverlay = require("src.dev.UndoHistoryOverlay")
 local PlayingHud = require("src.screens.PlayingHud")
@@ -70,6 +71,10 @@ function PlayingScene:init(game)
 	self.heldUndoKey = nil
 	self.undoRepeatTimer = 0
 	self.pauseSelection = 1
+	self.activeMessage = nil
+	self.activeMessageTime = 0
+	self.activeMessageArgs = nil
+	self.activatedTriggers = {}
 	self.states = StateMachine(self, PlayingStates)
 	self.hud = self:addChild(PlayingHud(self))
 end
@@ -96,6 +101,10 @@ function PlayingScene:loadLevel()
     self.mobileMoveDirection = nil
     self.moveRepeatTimer = 0
     self.levelPath = level.key
+	self.activeMessage = nil
+	self.activeMessageTime = 0
+	self.activeMessageArgs = nil
+	self.activatedTriggers = {}
     if self.board then self:removeChild(self.board) end
     self.board = LevelLoader.load(level.path, self.game.assets, self.game.events, level.identifier)
     self.board.drawSpace = "world"
@@ -191,7 +200,20 @@ end
 
 function PlayingScene:update(dt)
 	self.states:update(dt)
+	if self.activeMessage and self.states:is("playing") then
+		self.activeMessageTime = self.activeMessageTime - dt
+		if self.activeMessageTime <= 0 then
+			self.activeMessage = nil
+			self.activeMessageArgs = nil
+		end
+	end
 	self:updateChildren(dt)
+end
+
+function PlayingScene:showMessage(messageKey, duration, ...)
+	self.activeMessage = messageKey
+	self.activeMessageTime = duration or 8
+	self.activeMessageArgs = {...}
 end
 
 function PlayingScene:updatePlaying(dt)
@@ -229,7 +251,7 @@ function PlayingScene:movePlayer(direction)
 	if not player then return false end
 	local class = player:getComponent("CharacterClass")
 	local previousBoxesOnTargets = boxesOnTargets(self.board)
-	local moved = player:getComponent("CharacterMovement"):move(
+	local moved, changes = player:getComponent("CharacterMovement"):move(
 		self.board, direction, self.history)
 	self.game.events:emit("player.moved", {
 		level = self.levelPath,
@@ -243,7 +265,19 @@ function PlayingScene:movePlayer(direction)
 	if moved and hasBoxArrivedOnTarget(self.board, previousBoxesOnTargets) then
 		self.game.audio:play("target")
 	end
+	if moved then self:activateEnteredTriggers(changes) end
 	return moved
+end
+
+function PlayingScene:activateEnteredTriggers(changes)
+	for _, change in ipairs(changes or {}) do
+		local movedPlayer = change.object
+		if movedPlayer:hasComponent("Player") then
+			for _, trigger in ipairs(self.board:getTriggersAt(change.toX, change.toY)) do
+				TriggerRegistry.activate(self, trigger, movedPlayer)
+			end
+		end
+	end
 end
 
 function PlayingScene:undo()

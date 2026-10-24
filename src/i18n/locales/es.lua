@@ -42,4 +42,9 @@ return {
         quit = "Salir",
         all_complete = "Todos los niveles completados",
     },
+    tutorial = {
+        first_tutorial = "Usa las teclas de dirección para empujar la caja hasta la placa de presión.",
+        undo = "Pulsa %s o el botón de deshacer para volver atrás en el tiempo.",
+        change_player = "Pulsa %s para cambiar de personaje, o mantenlo pulsado y usa una dirección para elegir uno.",
+    },
 }

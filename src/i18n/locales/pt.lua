@@ -42,4 +42,9 @@ return {
         quit = "Sair",
         all_complete = "Todas as fases concluídas",
     },
+    tutorial = {
+        first_tutorial = "Use os direcionais para empurrar a caixa até a placa de pressão.",
+        undo = "Pressione %s ou o botão de desfazer para voltar no tempo.",
+        change_player = "Pressione %s para alternar entre personagens ou segure %s e use uma direção para escolher.",
+    },
 }
