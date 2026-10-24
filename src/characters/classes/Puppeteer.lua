@@ -159,14 +159,43 @@ end
 function Puppeteer:draw()
 	if not love or not love.graphics or #self.tethers == 0 then return end
 	love.graphics.push("all")
-	love.graphics.setColor(0.91, 0.76, 1, 0.86)
-	love.graphics.setLineWidth(1.5)
 	for _, tether in ipairs(self.tethers) do
 		if tether.parent.active ~= false and tether.child.active ~= false then
 			local parentTransform = tether.parent:getComponent("Transform")
 			local childTransform = tether.child:getComponent("Transform")
-			love.graphics.line(parentTransform.x, parentTransform.y,
-				childTransform.x, childTransform.y)
+			local dx = childTransform.x - parentTransform.x
+			local dy = childTransform.y - parentTransform.y
+			local length = math.sqrt(dx * dx + dy * dy)
+			if length > 0 then
+				local nx, ny = -dy / length, dx / length
+				-- A soft gray edge gives the white cord enough contrast on bright tiles.
+				love.graphics.setColor(0.30, 0.31, 0.34, 0.92)
+				love.graphics.setLineWidth(4)
+				love.graphics.line(parentTransform.x, parentTransform.y,
+					childTransform.x, childTransform.y)
+
+				love.graphics.setColor(0.96, 0.95, 0.88, 1)
+				love.graphics.setLineWidth(2)
+				love.graphics.line(parentTransform.x, parentTransform.y,
+					childTransform.x, childTransform.y)
+
+				-- Short alternating gray twists make the tether read like braided rope.
+				love.graphics.setColor(0.52, 0.54, 0.58, 0.95)
+				love.graphics.setLineWidth(1.4)
+				local spacing = 9
+				for distance = spacing / 2, length - spacing / 2, spacing do
+					local progress = distance / length
+					local centerX = parentTransform.x + dx * progress
+					local centerY = parentTransform.y + dy * progress
+					local twist = (math.floor(distance / spacing) % 2 == 0) and 2.4 or -2.4
+					local along = spacing * 0.30
+					love.graphics.line(
+						centerX - dx / length * along + nx * twist,
+						centerY - dy / length * along + ny * twist,
+						centerX + dx / length * along - nx * twist,
+						centerY + dy / length * along - ny * twist)
+				end
+			end
 		end
 	end
 	love.graphics.pop()
