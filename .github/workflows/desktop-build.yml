@@ -1,0 +1,31 @@
+name: Desktop builds
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Package Windows and macOS
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Build desktop packages
+        run: ./scripts/build-desktop.sh all
+
+      - name: Upload downloadable builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: sokoban-desktop-builds
+          path: dist/desktop/*.zip
+          if-no-files-found: error
+          retention-days: 30
