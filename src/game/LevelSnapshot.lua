@@ -24,9 +24,9 @@ end
 local function captureObjects(scene, board)
 	local objects, indexes = {}, {}
 	local activePlayer = scene.currentPlayer and scene:currentPlayer()
+	for index, object in ipairs(board.objects) do indexes[object] = index end
 
 	for index, object in ipairs(board.objects) do
-		indexes[object] = index
 		local transform = object:getComponent("Transform")
 		local characterClass = object:getComponent("CharacterClass")
 		local player = object:getComponent("Player")
@@ -45,6 +45,14 @@ local function captureObjects(scene, board)
 		if characterClass then
 			entry.characterClass = characterClass.id
 			entry.characterClassName = characterClass.name
+			if characterClass.id == "puppeteer" then
+				entry.tetheredObjectIndexes = {}
+				for _, object in ipairs(characterClass.tetheredObjects or {}) do
+					if indexes[object] then
+						entry.tetheredObjectIndexes[#entry.tetheredObjectIndexes + 1] = indexes[object]
+					end
+				end
+			end
 		end
 		local grass = object:getComponent("Grass")
 		if grass then entry.state = grass.state end
@@ -81,11 +89,20 @@ local function captureHistory(scene, objectIndexes)
 		local action = {}
 		for _, snapshot in ipairs(snapshots) do
 			if snapshot.component then
-				action[#action + 1] = {
+				local entry = {
 					object = objectIndexes[snapshot.object],
 					component = snapshot.component,
 					state = snapshot.state,
 				}
+				if snapshot.restoreTetheredObjects then
+					entry.restoreTetheredObjects = {}
+					for _, object in ipairs(snapshot.restoreTetheredObjects) do
+						if objectIndexes[object] then
+							entry.restoreTetheredObjects[#entry.restoreTetheredObjects + 1] = objectIndexes[object]
+						end
+					end
+				end
+				action[#action + 1] = entry
 			else
 				action[#action + 1] = {
 					object = objectIndexes[snapshot.object],

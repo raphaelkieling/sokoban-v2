@@ -10,6 +10,7 @@ local StateMachine = require("src.components.StateMachine")
 local CharacterClasses = require("src.characters.Classes")
 local PlayerStates = require("src.characters.PlayerStates")
 local Box = require("src.components.Box")
+local Tetherable = require("src.components.Tetherable")
 local Sinkable = require("src.components.Sinkable")
 local Shake = require("src.components.Shake")
 local ActionHistory = require("src.game.ActionHistory")
@@ -56,6 +57,7 @@ local function spawnBox(board, x, y)
     local box = GameObject("test-box")
     box:addComponent(Transform(x, y, 64, 2))
     box:addComponent(InteractiveObject())
+    box:addComponent(Tetherable())
     box:addComponent(Box())
     box:addComponent(Sinkable())
     board:addObject(box)
@@ -94,6 +96,137 @@ function tests.dwarf_walks_one_tile()
     local dwarf = spawnPlayer(board, 1, 0, Player.Classes.DWARF)
     assert(run(board, dwarf, {x = 1, y = 0}))
     assertPosition(dwarf, 2, 0)
+end
+
+function tests.puppeteer_synchronizes_only_boxes_linked_to_her()
+	local board = makeRectBoard(8, 5)
+	local puppeteer = spawnPlayer(board, 1, 1, Player.Classes.PUPPETEER)
+	local first = spawnBox(board, 2, 1)
+	local second = spawnBox(board, 3, 1)
+	local unlinked = spawnBox(board, 6, 3)
+	local class = puppeteer:getComponent("CharacterClass")
+
+	assert(run(board, puppeteer, {x = 1, y = 0}))
+	assertPosition(puppeteer, 2, 1)
+	assertPosition(first, 3, 1)
+	assertPosition(second, 4, 1)
+	assert(#class.tetheredObjects == 2,
+		"the boxes touched in the pushed chain should both receive strings")
+
+	assert(run(board, puppeteer, {x = 0, y = 1}))
+	assertPosition(puppeteer, 2, 2)
+	assertPosition(first, 3, 2)
+	assertPosition(second, 4, 2)
+	assertPosition(unlinked, 6, 3)
+end
+
+function tests.puppeteer_links_another_box_when_she_pushes_it()
+	local board = makeRectBoard(7, 4)
+	local puppeteer = spawnPlayer(board, 1, 1, Player.Classes.PUPPETEER)
+	local first = spawnBox(board, 2, 1)
+	local second = spawnBox(board, 2, 2)
+	local class = puppeteer:getComponent("CharacterClass")
+	local history = ActionHistory()
+
+	assert(run(board, puppeteer, {x = 1, y = 0}, history))
+	assert(#class.tetheredObjects == 1)
+	assert(run(board, puppeteer, {x = 0, y = 1}, history))
+	assertPosition(first, 3, 2)
+	assertPosition(second, 2, 3)
+	assert(#class.tetheredObjects == 2,
+		"a newly pushed box should join the existing synchronized group")
+
+	assert(history:undo())
+	assertPosition(puppeteer, 2, 1)
+	assertPosition(first, 3, 1)
+	assertPosition(second, 2, 2)
+	assert(#class.tetheredObjects == 1,
+		"undo should remove only the thread created by the undone push")
+end
+
+function tests.puppeteer_links_and_moves_are_restored_by_undo()
+	local board = makeBoard(0, 5, 0)
+	local puppeteer = spawnPlayer(board, 1, 0, Player.Classes.PUPPETEER)
+	local box = spawnBox(board, 2, 0)
+	local class = puppeteer:getComponent("CharacterClass")
+	local history = ActionHistory()
+
+	assert(run(board, puppeteer, {x = 1, y = 0}, history))
+	assert(#class.tetheredObjects == 1)
+	assert(history:undo())
+	assertPosition(puppeteer, 1, 0)
+	assertPosition(box, 2, 0)
+	assert(#class.tetheredObjects == 0,
+		"undoing the first push should also undo the new thread")
+end
+
+function tests.puppeteer_other_players_can_push_boxes_without_moving_her_threads()
+	local board = makeRectBoard(8, 4)
+	local puppeteer = spawnPlayer(board, 1, 1, Player.Classes.PUPPETEER)
+	local linked = spawnBox(board, 2, 1)
+	local dwarf = spawnPlayer(board, 3, 2, Player.Classes.DWARF)
+	local unlinked = spawnBox(board, 4, 1)
+
+	assert(run(board, puppeteer, {x = 1, y = 0}))
+	assertPosition(linked, 3, 1)
+	assert(run(board, dwarf, {x = 0, y = -1}))
+	assertPosition(dwarf, 3, 1)
+	assertPosition(linked, 3, 0,
+		"another character should push a linked box normally, without moving the Puppeteer")
+	assertPosition(puppeteer, 2, 1)
+
+	assert(run(board, dwarf, {x = 1, y = 0}))
+	assertPosition(unlinked, 5, 1,
+		"other classes should retain their normal box-pushing behavior")
+	assertPosition(linked, 3, 0,
+		"unlinked movement by another class should not synchronize the linked group")
+
+	assert(run(board, puppeteer, {x = 0, y = 1}))
+	assertPosition(linked, 3, 1,
+		"the linked box should synchronize again on the Puppeteer's own move")
+end
+
+function tests.puppeteer_blocked_thread_stays_while_player_and_other_threads_move()
+	local board = makeRectBoard(7, 4, {["3:2"] = true})
+	local puppeteer = spawnPlayer(board, 1, 1, Player.Classes.PUPPETEER)
+	local blockedBox = spawnBox(board, 2, 1)
+	local movingBox = spawnBox(board, 3, 1)
+
+	assert(run(board, puppeteer, {x = 1, y = 0}))
+	assertPosition(blockedBox, 3, 1)
+	assertPosition(movingBox, 4, 1)
+	assert(run(board, puppeteer, {x = 0, y = 1}),
+		"a blocked linked box should not prevent the Puppeteer from moving")
+	assertPosition(puppeteer, 2, 2)
+	assertPosition(blockedBox, 3, 1,
+		"the linked box whose destination is blocked should be left behind")
+	assertPosition(movingBox, 4, 2,
+		"other linked boxes with a free destination should still move")
+end
+
+function tests.puppeteer_can_tether_and_synchronize_a_bonfire()
+	local board = makeRectBoard(6, 4)
+	board.assets = {
+		bonfireAnimation = function(_, _, state)
+			return {state = state, update = function() end}
+		end,
+		tilesetRenderer = function()
+			return SpriteRenderer({}, 2, 1)
+		end,
+	}
+	local puppeteer = spawnPlayer(board, 1, 1, Player.Classes.PUPPETEER)
+	local bonfire = board:addBonfire(2, 1, {})
+	local class = puppeteer:getComponent("CharacterClass")
+
+	assert(bonfire:hasComponent("Tetherable"),
+		"bonfires should opt in to Puppeteer tethers through a component")
+	assert(run(board, puppeteer, {x = 1, y = 0}))
+	assertPosition(bonfire, 3, 1)
+	assert(#class.tetheredObjects == 1,
+		"the Puppeteer should track tetherable objects without depending on their concrete type")
+	assert(run(board, puppeteer, {x = 0, y = 1}))
+	assertPosition(puppeteer, 2, 2)
+	assertPosition(bonfire, 3, 2)
 end
 
 function tests.farmer_cuts_tall_grass_without_stepping_onto_it_and_undo_restores_it()

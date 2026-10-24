@@ -18,6 +18,7 @@ local PLAYER_CLASSES = {
 	Sorcerer = Player.Classes.SORCERER,
 	MysteriousPriest = Player.Classes.MYSTERIOUS_PRIEST,
 	Farmer = Player.Classes.FARMER,
+	Puppeteer = Player.Classes.PUPPETEER,
 }
 
 local function readProject(path)

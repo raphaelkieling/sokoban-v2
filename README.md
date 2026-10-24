@@ -3,7 +3,7 @@
 A fantasy Sokoban puzzle where heroes use unique abilities to move blocks and reach each level's goals.
 
 ![Menu screenshot](docs/screenshot_menu.png)
-![Gameplay screenshot](docs/screenshot_first_level.png)
+![Gameplay screenshot](docs/screenshot_random_level.png)
 
 ## Game
 

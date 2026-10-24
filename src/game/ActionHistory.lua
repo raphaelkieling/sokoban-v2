@@ -47,7 +47,7 @@ function ActionHistory:undo()
 						snapshot.originX, snapshot.originY)
 				end
 			end
-            snapshot.object:getComponent(snapshot.component):setState(snapshot.state)
+            snapshot.object:getComponent(snapshot.component):setState(snapshot.state, snapshot)
         else
 			local transform = snapshot.object:getComponent("Transform")
 			local renderer = snapshot.object:getComponent("SpriteRenderer")
