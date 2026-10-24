@@ -23,7 +23,7 @@ function tests.catalogs_translate_menu_settings_and_formatted_strings()
 	assert(I18n.t("tutorial.undo", "K")
 		== "Pressione K ou o botão de desfazer para voltar no tempo.")
 	assert(I18n.t("tutorial.change_player", "J", "J")
-		== "Pressione J para alternar entre personagens ou segure J e use uma direção para escolher.")
+		== "Pressione J para alternar entre personagens ou segure J e use os direcionais para escolher.")
 end
 
 return tests

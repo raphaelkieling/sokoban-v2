@@ -224,7 +224,9 @@ end
 
 function Board:isMoving()
     for _, object in ipairs(self.objects) do
-        if object.active ~= false and object:getComponent("Transform"):isMoving() then
+		if (object.active ~= false or object.visualOnly)
+			and (object:getComponent("Transform"):isMoving()
+				or (object.visualOnly and object:getComponent("Sinkable"))) then
             return true
         end
     end
@@ -292,8 +294,8 @@ function Board:draw(activePlayer)
     end
 
     local drawOrder = {}
-    for _, object in ipairs(self.objects) do
-        if object.active ~= false then drawOrder[#drawOrder + 1] = object end
+	for _, object in ipairs(self.objects) do
+		if object.active ~= false or object.visualOnly then drawOrder[#drawOrder + 1] = object end
     end
     for _, object in ipairs(self.targetObjects) do
         drawOrder[#drawOrder + 1] = object

@@ -30,7 +30,7 @@ function Assets.new()
 end
 
 function Assets:tileRenderer(scale, layer)
-    return SpriteRenderer(self.tiles, scale or 2, layer)
+	return SpriteRenderer(self.tiles, scale or 2, layer, self.outlineShader)
 end
 
 function Assets:tilesetImage(tileset)
@@ -45,7 +45,7 @@ function Assets:tilesetImage(tileset)
 end
 
 function Assets:tilesetRenderer(tileset, scale, layer)
-    return SpriteRenderer(self:tilesetImage(tileset), scale or 2, layer)
+	return SpriteRenderer(self:tilesetImage(tileset), scale or 2, layer, self.outlineShader)
 end
 
 function Assets:tileAnimation(tileX, tileY)

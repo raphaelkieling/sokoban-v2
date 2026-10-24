@@ -25,7 +25,11 @@ function tests.target_owns_free_and_pressed_single_frame_animations()
 	occupied = true
 	target:update(0)
 	assert(target.state == "pressed")
+	assert(target.pulseTime == target.pulseDuration,
+		"pressing a target should start its pulse feedback")
 	assert(animation.current.x == 10 and animation.current.y == 16)
+	target:update(target.pulseDuration / 2)
+	assert(target.pulseTime > 0 and target.pulseTime < target.pulseDuration)
 
 	occupied = false
 	target:update(0)

@@ -29,9 +29,33 @@ function ActionHistory:undo()
     for index = #snapshots, 1, -1 do
         local snapshot = snapshots[index]
         if snapshot.component then
+			if snapshot.component == "Sinkable" and snapshot.state == "active"
+				and snapshot.sinkX ~= nil and snapshot.originX ~= nil then
+				local transform = snapshot.object:getComponent("Transform")
+				transform.x = (snapshot.sinkX + 0.5) * transform.cellSize
+				transform.y = (snapshot.sinkY + 0.5) * transform.cellSize
+				transform.tween = nil
+				transform:restore({
+					gridX = snapshot.originX,
+					gridY = snapshot.originY,
+					x = (snapshot.originX + 0.5) * transform.cellSize,
+					y = (snapshot.originY + 0.5) * transform.cellSize,
+				})
+				local renderer = snapshot.object:getComponent("SpriteRenderer")
+				if renderer then
+					renderer:playUndo(snapshot.sinkX, snapshot.sinkY,
+						snapshot.originX, snapshot.originY)
+				end
+			end
             snapshot.object:getComponent(snapshot.component):setState(snapshot.state)
         else
-            snapshot.object:getComponent("Transform"):restore(snapshot)
+			local transform = snapshot.object:getComponent("Transform")
+			local renderer = snapshot.object:getComponent("SpriteRenderer")
+			if renderer then
+				renderer:playUndo(transform.gridX, transform.gridY,
+					snapshot.gridX, snapshot.gridY)
+			end
+			transform:restore(snapshot)
         end
         local player = snapshot.object:getComponent("Player")
         local stateMachine = player and player:getStateMachine()

@@ -14,6 +14,7 @@ local Sinkable = require("src.components.Sinkable")
 local Shake = require("src.components.Shake")
 local ActionHistory = require("src.game.ActionHistory")
 local SpriteRenderer = require("src.components.SpriteRenderer")
+local Animation = require("src.components.Animation")
 
 local tests = {}
 
@@ -299,6 +300,10 @@ function tests.player_uses_pushing_state_during_a_push()
 
     assert(run(board, player, {x = 1, y = 0}))
     assert(stateMachine.currentName == "pushing")
+	player:update(0.06)
+	local scaleX, scaleY = stateMachine:visualScale()
+	assert(scaleX > 1 and scaleY < 1,
+		"the character pushing state should add directional squash-and-stretch")
     player:update(0.2)
     assert(stateMachine.currentName == "idle")
     assertPosition(box, 3, 0)
@@ -425,6 +430,9 @@ function tests.warrior_pushes_a_box_through_passthrough_when_it_can_land_on_floo
 	assert(box.active == true, "a box should survive if the push carries it through passthrough")
 	assertPosition(warrior, 2, 0)
 	assertPosition(box, 5, 0)
+	local transform = box:getComponent("Transform")
+	assert(transform.tween and transform.tween.pushed,
+		"pushed boxes should carry squash-and-stretch feedback during movement")
 end
 
 function tests.warrior_marks_a_box_lost_if_the_push_stops_inside_passthrough()
@@ -433,17 +441,58 @@ function tests.warrior_marks_a_box_lost_if_the_push_stops_inside_passthrough()
 	board:setCell(4, 0, {walkable = false, wall = true})
 	local warrior = spawnPlayer(board, 1, 0, Player.Classes.WARRIOR)
 	local box = spawnBox(board, 2, 0)
+	box:addComponent(Animation({draw = function() end, update = function() end}))
+	box:addComponent(SpriteRenderer({}, 2, 2))
 	local history = ActionHistory()
 
 	assert(run(board, warrior, {x = 1, y = 0}, history))
-	assert(box:getComponent("Sinkable").state == "lost")
-	assert(box.active == false, "a box that stops in passthrough should be marked lost")
+	assert(box:getComponent("Sinkable").state == "sinking")
+	assert(box.active == false and box.visualOnly,
+		"a box in passthrough should enter its own temporary sinking visual state")
 	assertPosition(warrior, 2, 0)
+	box:update(0.4)
+	assert(box:getComponent("Sinkable").state == "lost" and not box.visualOnly,
+		"the box should finish sinking into its lost state")
 
 	assert(history:undo())
 	assert(box.active == true and box:getComponent("Sinkable").state == "active",
 		"undo should restore a box lost in passthrough")
 	assertPosition(box, 2, 0)
+	assert(box:getComponent("Transform").tween,
+		"undo should animate the box back from the passthrough tile")
+	assert(box:getComponent("SpriteRenderer").undoFeedback ~= nil,
+		"the box sprite should own its reverse trail and white-flash feedback")
+end
+
+function tests.sinkable_owns_and_advances_its_fall_state()
+	local board = makeBoard(0, 3, 0)
+	local box = spawnBox(board, 1, 0)
+	local sinkable = box:getComponent("Sinkable")
+	sinkable:setState("sinking", {originX = 1, originY = 0, sinkX = 2, sinkY = 0})
+	assert(board:isMoving(), "the board should wait for a sinking object's visual state")
+	local x, y, scale, alpha = sinkable:visualTransform()
+	assert(x == 96 and y == 32 and scale == 1 and alpha == 1,
+		"the fall should start at the box's own origin")
+	sinkable:update(sinkable.sinkDuration / 2)
+	x, y, scale, alpha = sinkable:visualTransform()
+	assert(x > 96 and x < 160 and scale < 1 and alpha < 1,
+		"the component should interpolate its sprite into the destination")
+	sinkable:update(sinkable.sinkDuration)
+	assert(sinkable.state == "lost" and not box.visualOnly,
+		"the component should finish its own fall and stop rendering")
+	assert(not board:isMoving(), "a completed fall should stop blocking board input")
+end
+
+function tests.transform_squashes_after_pushed_movement()
+	local transform = Transform(1, 0, 64)
+	transform:moveTo(2, 0, true)
+	transform:update(0.12)
+	local scaleX, scaleY = transform:visualScale()
+	assert(scaleX > 1 and scaleY < 1,
+		"a pushed object should compress horizontally on landing")
+	transform:update(0.14)
+	scaleX, scaleY = transform:visualScale()
+	assert(scaleX == 1 and scaleY == 1, "the squash should settle back to normal")
 end
 
 function tests.telekinetic_pushes_the_first_object_one_cell()

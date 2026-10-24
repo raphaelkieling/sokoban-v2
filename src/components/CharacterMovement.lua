@@ -65,7 +65,8 @@ function CharacterMovement:move(board, direction, history, effectSink)
 
 	local snapshots = {}
 	for _, change in ipairs(changes) do
-		change.object:getComponent("Transform"):moveTo(change.toX, change.toY)
+		change.object:getComponent("Transform"):moveTo(change.toX, change.toY,
+			change.object ~= actor)
 		snapshots[#snapshots + 1] = {
 			object = change.object,
 			gridX = change.fromX,
@@ -75,7 +76,9 @@ function CharacterMovement:move(board, direction, history, effectSink)
 		}
 	end
 	for _, change in ipairs(componentChanges) do
-		snapshots[#snapshots + 1] = change
+		local snapshot = {}
+		for key, value in pairs(change) do snapshot[key] = value end
+		snapshots[#snapshots + 1] = snapshot
 	end
 	if history then history:record(snapshots) end
 	if #changes > 0 then

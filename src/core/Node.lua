@@ -34,13 +34,13 @@ end
 
 function Node:updateChildren(dt)
 	for _, child in ipairs(self.children) do
-		if child.active ~= false and child.update then child:update(dt) end
+		if (child.active ~= false or child.visualOnly) and child.update then child:update(dt) end
 	end
 end
 
 function Node:drawChildren(space, context)
 	for _, child in ipairs(self.children) do
-		if child.active ~= false and child.draw
+		if (child.active ~= false or child.visualOnly) and child.draw
 			and (not space or child.drawSpace == space) then
 			child:draw(context)
 		end

@@ -48,4 +48,10 @@ function StateMachine:visualOffset()
     return rotation or 0, offsetX or 0, offsetY or 0
 end
 
+function StateMachine:visualScale()
+	if not self.machine then return 1, 1 end
+	local scaleX, scaleY = self.machine:dispatch("visualScale")
+	return scaleX or 1, scaleY or 1
+end
+
 return StateMachine

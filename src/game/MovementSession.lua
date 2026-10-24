@@ -33,14 +33,16 @@ function MovementSession:componentAt(x, y, componentName)
     end
 end
 
-function MovementSession:setComponentState(component, state)
+function MovementSession:setComponentState(component, state, metadata)
     if not component or component.state == state then return false end
-    self.componentChanges[#self.componentChanges + 1] = {
+	local change = {
         object = component.owner,
         component = component.componentName,
         state = component.state,
     }
-    component:setState(state)
+	for key, value in pairs(metadata or {}) do change[key] = value end
+	self.componentChanges[#self.componentChanges + 1] = change
+    component:setState(state, metadata)
     return true
 end
 
@@ -61,7 +63,13 @@ function MovementSession:moveObject(object, x, y)
 	local cell = self.board:getCell(x, y)
 	local sinkable = object:getComponent("Sinkable")
 	if cell and cell.passthrough and sinkable then
-		self:setComponentState(sinkable, "lost")
+		local position = self.positions[object]
+		self:setComponentState(sinkable, "sinking", {
+			sinkX = x,
+			sinkY = y,
+			originX = position and position.x,
+			originY = position and position.y,
+		})
 		self.positions[object] = nil
 		return
 	end
