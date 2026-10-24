@@ -50,4 +50,5 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/desktop/*.zip \
             --title "Sokoban v2 $GITHUB_REF_NAME" \
-            --generate-notes
+            --generate-notes \
+            --repo "$GITHUB_REPOSITORY"
