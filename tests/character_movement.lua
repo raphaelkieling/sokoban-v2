@@ -110,8 +110,11 @@ function tests.puppeteer_synchronizes_only_boxes_linked_to_her()
 	assertPosition(puppeteer, 2, 1)
 	assertPosition(first, 3, 1)
 	assertPosition(second, 4, 1)
-	assert(#class.tetheredObjects == 2,
+	assert(#class.tethers == 2,
 		"the boxes touched in the pushed chain should both receive strings")
+	assert(class.tethers[1].parent == puppeteer and class.tethers[1].child == first)
+	assert(class.tethers[2].parent == first and class.tethers[2].child == second,
+		"a box pushed by another box should hang from that box, not directly from the Puppeteer")
 
 	assert(run(board, puppeteer, {x = 0, y = 1}))
 	assertPosition(puppeteer, 2, 2)
@@ -129,18 +132,20 @@ function tests.puppeteer_links_another_box_when_she_pushes_it()
 	local history = ActionHistory()
 
 	assert(run(board, puppeteer, {x = 1, y = 0}, history))
-	assert(#class.tetheredObjects == 1)
+	assert(#class.tethers == 1)
 	assert(run(board, puppeteer, {x = 0, y = 1}, history))
 	assertPosition(first, 3, 2)
 	assertPosition(second, 2, 3)
-	assert(#class.tetheredObjects == 2,
+	assert(#class.tethers == 2,
 		"a newly pushed box should join the existing synchronized group")
+	assert(class.tethers[2].parent == puppeteer and class.tethers[2].child == second,
+		"an object directly pushed by the Puppeteer should attach to the Puppeteer")
 
 	assert(history:undo())
 	assertPosition(puppeteer, 2, 1)
 	assertPosition(first, 3, 1)
 	assertPosition(second, 2, 2)
-	assert(#class.tetheredObjects == 1,
+	assert(#class.tethers == 1,
 		"undo should remove only the thread created by the undone push")
 end
 
@@ -152,11 +157,11 @@ function tests.puppeteer_links_and_moves_are_restored_by_undo()
 	local history = ActionHistory()
 
 	assert(run(board, puppeteer, {x = 1, y = 0}, history))
-	assert(#class.tetheredObjects == 1)
+	assert(#class.tethers == 1)
 	assert(history:undo())
 	assertPosition(puppeteer, 1, 0)
 	assertPosition(box, 2, 0)
-	assert(#class.tetheredObjects == 0,
+	assert(#class.tethers == 0,
 		"undoing the first push should also undo the new thread")
 end
 
@@ -200,8 +205,8 @@ function tests.puppeteer_blocked_thread_stays_while_player_and_other_threads_mov
 	assertPosition(puppeteer, 2, 2)
 	assertPosition(blockedBox, 3, 1,
 		"the linked box whose destination is blocked should be left behind")
-	assertPosition(movingBox, 4, 2,
-		"other linked boxes with a free destination should still move")
+	assertPosition(movingBox, 4, 1,
+		"a child box should stay with its parent when the parent cannot move")
 end
 
 function tests.puppeteer_can_tether_and_synchronize_a_bonfire()
@@ -222,11 +227,66 @@ function tests.puppeteer_can_tether_and_synchronize_a_bonfire()
 		"bonfires should opt in to Puppeteer tethers through a component")
 	assert(run(board, puppeteer, {x = 1, y = 0}))
 	assertPosition(bonfire, 3, 1)
-	assert(#class.tetheredObjects == 1,
+	assert(#class.tethers == 1,
 		"the Puppeteer should track tetherable objects without depending on their concrete type")
 	assert(run(board, puppeteer, {x = 0, y = 1}))
 	assertPosition(puppeteer, 2, 2)
 	assertPosition(bonfire, 3, 2)
+end
+
+function tests.puppeteer_tethers_a_blocked_bonfire_and_undo_restores_the_string()
+	local board = makeRectBoard(5, 4, {["2:0"] = true})
+	board.assets = {
+		bonfireAnimation = function(_, _, state)
+			return {state = state, update = function() end}
+		end,
+		tilesetRenderer = function() return SpriteRenderer({}, 2, 1) end,
+	}
+	local puppeteer = spawnPlayer(board, 2, 2, Player.Classes.PUPPETEER)
+	local bonfire = board:addBonfire(2, 1, {})
+	local class = puppeteer:getComponent("CharacterClass")
+	local history = ActionHistory()
+
+	assert(run(board, puppeteer, {x = 0, y = -1}, history),
+		"linking a blocked object should count as an undoable action")
+	assertPosition(puppeteer, 2, 2)
+	assertPosition(bonfire, 2, 1)
+	assert(#class.tethers == 1 and class.tethers[1].parent == puppeteer
+		and class.tethers[1].child == bonfire,
+		"the bonfire should get its string even when a wall prevents the push")
+
+	assert(history:undo())
+	assert(#class.tethers == 0, "undo should remove the newly created string")
+end
+
+function tests.puppeteer_tether_tree_moves_children_only_with_their_parent()
+	local board = makeRectBoard(7, 4, {["4:1"] = true})
+	board.assets = {
+		bonfireAnimation = function(_, _, state)
+			return {state = state, update = function() end}
+		end,
+		tilesetRenderer = function() return SpriteRenderer({}, 2, 1) end,
+	}
+	local puppeteer = spawnPlayer(board, 1, 1, Player.Classes.PUPPETEER)
+	local box = spawnBox(board, 2, 1)
+	local bonfire = board:addBonfire(3, 1, {})
+	local class = puppeteer:getComponent("CharacterClass")
+
+	assert(run(board, puppeteer, {x = 1, y = 0}),
+		"a blocked push should still create the tether tree")
+	assertPosition(puppeteer, 1, 1)
+	assertPosition(box, 2, 1)
+	assertPosition(bonfire, 3, 1)
+	assert(class.tethers[1].parent == puppeteer and class.tethers[1].child == box)
+	assert(class.tethers[2].parent == box and class.tethers[2].child == bonfire,
+		"the bonfire's string should start at the box that bumped it")
+
+	board:setCell(4, 1, {walkable = true})
+	assert(run(board, puppeteer, {x = 1, y = 0}))
+	assertPosition(puppeteer, 2, 1)
+	assertPosition(box, 3, 1)
+	assertPosition(bonfire, 4, 1,
+		"the child should move when its parent can advance on a later turn")
 end
 
 function tests.farmer_cuts_tall_grass_without_stepping_onto_it_and_undo_restores_it()

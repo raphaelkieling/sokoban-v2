@@ -46,10 +46,14 @@ local function captureObjects(scene, board)
 			entry.characterClass = characterClass.id
 			entry.characterClassName = characterClass.name
 			if characterClass.id == "puppeteer" then
-				entry.tetheredObjectIndexes = {}
-				for _, object in ipairs(characterClass.tetheredObjects or {}) do
-					if indexes[object] then
-						entry.tetheredObjectIndexes[#entry.tetheredObjectIndexes + 1] = indexes[object]
+				entry.tethers = {}
+				for _, tether in ipairs(characterClass.tethers or {}) do
+					local parentIndex, childIndex = indexes[tether.parent], indexes[tether.child]
+					if parentIndex and childIndex then
+						entry.tethers[#entry.tethers + 1] = {
+							parent = parentIndex,
+						child = childIndex,
+						}
 					end
 				end
 			end
@@ -94,11 +98,16 @@ local function captureHistory(scene, objectIndexes)
 					component = snapshot.component,
 					state = snapshot.state,
 				}
-				if snapshot.restoreTetheredObjects then
-					entry.restoreTetheredObjects = {}
-					for _, object in ipairs(snapshot.restoreTetheredObjects) do
-						if objectIndexes[object] then
-							entry.restoreTetheredObjects[#entry.restoreTetheredObjects + 1] = objectIndexes[object]
+				if snapshot.restoreTethers then
+					entry.restoreTethers = {}
+					for _, tether in ipairs(snapshot.restoreTethers) do
+						local parentIndex = objectIndexes[tether.parent]
+						local childIndex = objectIndexes[tether.child]
+						if parentIndex and childIndex then
+							entry.restoreTethers[#entry.restoreTethers + 1] = {
+								parent = parentIndex,
+								child = childIndex,
+							}
 						end
 					end
 				end

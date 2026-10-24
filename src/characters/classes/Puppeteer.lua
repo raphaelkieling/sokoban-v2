@@ -5,142 +5,168 @@ Puppeteer.id = "puppeteer"
 Puppeteer.name = "Puppeteer"
 Puppeteer.sprite = {x = 0, y = 6, scale = 2.25}
 
-local function copyObjects(objects)
+local function copyTethers(tethers)
 	local copy = {}
-	for _, object in ipairs(objects or {}) do copy[#copy + 1] = object end
+	for _, tether in ipairs(tethers or {}) do
+		copy[#copy + 1] = {parent = tether.parent, child = tether.child}
+	end
 	return copy
 end
 
-local function sameObjects(first, second)
+local function sameTethers(first, second)
 	if #first ~= #second then return false end
-	for index, object in ipairs(first) do
-		if second[index] ~= object then return false end
+	for index, tether in ipairs(first) do
+		local other = second[index]
+		if not other or other.parent ~= tether.parent or other.child ~= tether.child then
+			return false
+		end
 	end
 	return true
 end
 
-local function occupantAt(movement, positions, x, y, except)
-	for _, object in ipairs(movement.board.objects) do
-		if object ~= except and object.active ~= false and object:hasComponent("InteractiveObject") then
-			local position = positions[object] or movement:position(object)
-			if position and position.x == x and position.y == y then return object end
-		end
+local function tetherIndex(tethers, child)
+	for index, tether in ipairs(tethers) do
+		if tether.child == child then return index end
 	end
 end
 
 function Puppeteer:init()
 	CharacterClass.init(self)
-	self.tetheredObjects = {}
+	self.tethers = {}
 	self.state = 0
 end
 
 function Puppeteer:setState(state, metadata)
 	self.state = state
-	if metadata and metadata.restoreTetheredObjects then
-		self.tetheredObjects = copyObjects(metadata.restoreTetheredObjects)
+	if metadata and metadata.restoreTethers then
+		self.tethers = copyTethers(metadata.restoreTethers)
 	end
 end
 
 function Puppeteer:move(movement, actor, direction, destination)
-	local originalLinks = copyObjects(self.tetheredObjects)
-	local linkedObjects, linkedSet = {}, {}
-	local function addTetherable(object)
-		if not object or not object:hasComponent("Tetherable")
-			or not movement:position(object) or linkedSet[object] then
+	local originalTethers = copyTethers(self.tethers)
+	local tethers = {}
+	for _, tether in ipairs(originalTethers) do
+		local parentIsAlive = tether.parent == actor or movement:position(tether.parent) ~= nil
+		if parentIsAlive and movement:position(tether.child)
+			and tether.child:hasComponent("Tetherable") then
+			tethers[#tethers + 1] = tether
+		end
+	end
+
+	local function attach(parent, child)
+		if not child or child == actor or not child:hasComponent("Tetherable")
+			or not movement:position(child) then
 			return false
 		end
-		linkedSet[object] = true
-		linkedObjects[#linkedObjects + 1] = object
+
+		-- Refuse a link that would make a cycle in the string tree.
+		local ancestor = parent
+		while ancestor and ancestor ~= actor do
+			if ancestor == child then return false end
+			local index = tetherIndex(tethers, ancestor)
+			ancestor = index and tethers[index].parent or nil
+		end
+
+		local index = tetherIndex(tethers, child)
+		if index then
+			if tethers[index].parent == parent then return false end
+			tethers[index] = {parent = parent, child = child}
+		else
+			tethers[#tethers + 1] = {parent = parent, child = child}
+		end
 		return true
 	end
 
-	-- Sunk boxes no longer have a position in the movement session and are
-	-- therefore automatically removed from the living thread group.
-	for _, object in ipairs(originalLinks) do addTetherable(object) end
+	local function childrenOf(parent)
+		local children = {}
+		for _, tether in ipairs(tethers) do
+			if tether.parent == parent then children[#children + 1] = tether.child end
+		end
+		return children
+	end
+
+	local function propagateFrom(parent, tryMove)
+		for _, child in ipairs(childrenOf(parent)) do tryMove(child) end
+	end
+
+	local moving, results = {}, {}
+	local tryMove
+	tryMove = function(object)
+		if results[object] ~= nil then return results[object] end
+		if moving[object] then return false end
+		moving[object] = true
+
+		local position = movement:position(object)
+		if not position then
+			moving[object] = nil
+			results[object] = false
+			return false
+		end
+
+		local nextX, nextY = position.x + direction.x, position.y + direction.y
+		local blocker = movement:objectAt(nextX, nextY, object)
+		if blocker and blocker ~= actor and blocker:hasComponent("Tetherable") then
+			attach(object, blocker)
+			tryMove(blocker)
+		end
+
+		local moved = movement:canEnter(nextX, nextY, object)
+			and movement:objectAt(nextX, nextY, object) == nil
+		if moved then
+			movement:moveObject(object, nextX, nextY)
+		else
+			movement:markBlocked(movement:objectAt(nextX, nextY, object) or object)
+		end
+		moving[object] = nil
+		results[object] = moved
+
+		-- A child follows only after its parent has actually moved.
+		if moved then propagateFrom(object, tryMove) end
+		return moved
+	end
 
 	local touched = movement:objectAt(destination.x, destination.y, actor)
 	if touched and not touched:hasComponent("Tetherable") then
 		movement:markBlocked(touched)
 		return false
 	end
-	if touched then addTetherable(touched) end
+	if touched then attach(actor, touched) end
 
-	-- Any tetherable object a moving thread would bump joins the group. Resolve
-	-- the full set before moving so adjacent objects can vacate each other's cells.
-	local index = 1
-	while index <= #linkedObjects do
-		local object = linkedObjects[index]
-		local position = movement:position(object)
-		local blocker = movement:objectAt(position.x + direction.x,
-			position.y + direction.y, object)
-		if blocker and blocker ~= actor and blocker:hasComponent("Tetherable") then
-			addTetherable(blocker)
-		end
-		index = index + 1
-	end
-
-	-- Plan the tethered objects independently, front to back. A blocked thread stays put;
-	-- it must not prevent the puppeteer or other unblocked threads from moving.
-	table.sort(linkedObjects, function(a, b)
-		local aPosition, bPosition = movement:position(a), movement:position(b)
-		local aProjection = aPosition.x * direction.x + aPosition.y * direction.y
-		local bProjection = bPosition.x * direction.x + bPosition.y * direction.y
-		return aProjection > bProjection
-	end)
-
-	local plannedPositions = {}
-	for _, object in ipairs(linkedObjects) do
-		local position = movement:position(object)
-		local nextX, nextY = position.x + direction.x, position.y + direction.y
-		local blocker = occupantAt(movement, plannedPositions, nextX, nextY, object)
-		local canMove = movement:canEnter(nextX, nextY, object)
-			and (not blocker or blocker == actor)
-		if canMove then
-			plannedPositions[object] = {x = nextX, y = nextY}
-		else
-			plannedPositions[object] = position
-			movement:markBlocked(blocker or object)
-		end
-	end
-
-	-- The object in the player's destination must vacate that cell; other linked
-	-- objects may stay behind without stopping the Puppeteer.
+	local actorCanMove = true
 	if touched then
-		local planned = plannedPositions[touched]
-		local original = movement:position(touched)
-		if not planned or (planned.x == original.x and planned.y == original.y) then
-			return false
+		actorCanMove = tryMove(touched)
+		if actorCanMove then
+			actorCanMove = movement:enter(actor, destination.x, destination.y)
 		end
+	else
+		actorCanMove = movement:enter(actor, destination.x, destination.y)
 	end
 
-	for _, object in ipairs(linkedObjects) do
-		local planned = plannedPositions[object]
-		local original = movement:position(object)
-		if planned.x ~= original.x or planned.y ~= original.y then
-			movement:moveObject(object, planned.x, planned.y)
-		end
+	if actorCanMove then
+		propagateFrom(actor, tryMove)
 	end
-	if not movement:enter(actor, destination.x, destination.y) then return false end
 
-	if not sameObjects(originalLinks, linkedObjects) then
+	if not sameTethers(originalTethers, tethers) then
 		movement:setComponentState(self, (self.state or 0) + 1, {
-			restoreTetheredObjects = originalLinks,
+			restoreTethers = originalTethers,
 		})
-		self.tetheredObjects = linkedObjects
+		self.tethers = tethers
 	end
-	return true
+	return actorCanMove or not sameTethers(originalTethers, tethers)
 end
 
 function Puppeteer:draw()
-	if not love or not love.graphics or #self.tetheredObjects == 0 then return end
-	local transform = self.owner:getComponent("Transform")
+	if not love or not love.graphics or #self.tethers == 0 then return end
 	love.graphics.push("all")
 	love.graphics.setColor(0.91, 0.76, 1, 0.86)
 	love.graphics.setLineWidth(1.5)
-	for _, object in ipairs(self.tetheredObjects) do
-		if object.active ~= false then
-			local objectTransform = object:getComponent("Transform")
-			love.graphics.line(transform.x, transform.y, objectTransform.x, objectTransform.y)
+	for _, tether in ipairs(self.tethers) do
+		if tether.parent.active ~= false and tether.child.active ~= false then
+			local parentTransform = tether.parent:getComponent("Transform")
+			local childTransform = tether.child:getComponent("Transform")
+			love.graphics.line(parentTransform.x, parentTransform.y,
+				childTransform.x, childTransform.y)
 		end
 	end
 	love.graphics.pop()
