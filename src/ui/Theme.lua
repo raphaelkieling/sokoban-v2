@@ -55,13 +55,13 @@ function Theme.drawMenuItem(label, selected, centerY, width, height, fontSize, m
 end
 
 function Theme.drawTwoColumnMenuItem(leftLabel, rightLabel, selected, centerY,
-	width, height, fontSize, fixedWidth)
+	width, height, fontSize, fixedWidth, centerX)
 	Theme.setMenuFont(fontSize, width, height)
 	local font = love.graphics.getFont()
 	local scale = Theme.scale(width, height)
 	local itemWidth = math.min(fixedWidth or width * 0.72, width * 0.9)
 	local itemHeight = math.max(font:getHeight() + 6 * scale, 34 * scale)
-	local x = (width - itemWidth) / 2
+	local x = (centerX or width / 2) - itemWidth / 2
 	local y = centerY - itemHeight / 2
 	local padding = 16 * scale
 	local textY = y + (itemHeight - font:getHeight()) / 2

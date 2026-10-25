@@ -371,15 +371,15 @@ function tests.dwarf_pushes_one_box_one_tile()
     assertPosition(box, 3, 0)
 end
 
-function tests.dwarf_pushes_a_contiguous_chain()
+function tests.dwarf_cannot_push_more_than_one_box()
     local board = makeBoard(0, 5, 0)
     local dwarf = spawnPlayer(board, 1, 0, Player.Classes.DWARF)
     local first = spawnBox(board, 2, 0)
     local second = spawnBox(board, 3, 0)
-    assert(run(board, dwarf, {x = 1, y = 0}))
-    assertPosition(dwarf, 2, 0)
-    assertPosition(first, 3, 0)
-    assertPosition(second, 4, 0)
+    assert(not run(board, dwarf, {x = 1, y = 0}))
+    assertPosition(dwarf, 1, 0)
+    assertPosition(first, 2, 0)
+    assertPosition(second, 3, 0)
 end
 
 function tests.dwarf_cannot_push_into_wall_or_off_map()

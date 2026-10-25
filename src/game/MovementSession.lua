@@ -113,7 +113,7 @@ function MovementSession:findInRay(startX, startY, direction, actor)
     end
 end
 
-function MovementSession:pushChain(actor, destination, direction, maxDistance)
+function MovementSession:pushChain(actor, destination, direction, maxDistance, maxBoxes)
     local first = self:objectAt(destination.x, destination.y, actor)
     if not first then
         return self:enter(actor, destination.x, destination.y)
@@ -127,6 +127,16 @@ function MovementSession:pushChain(actor, destination, direction, maxDistance)
         chain[#chain + 1] = object
         x, y = x + direction.x, y + direction.y
     end
+	if maxBoxes then
+		local boxCount = 0
+		for _, object in ipairs(chain) do
+			if object:hasComponent("Box") then boxCount = boxCount + 1 end
+		end
+		if boxCount > maxBoxes then
+			self:markBlocked(chain[1])
+			return false
+		end
+	end
 
     local lastObject = chain[#chain]
 	local last = self:position(lastObject)

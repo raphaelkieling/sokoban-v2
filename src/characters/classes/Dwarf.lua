@@ -6,7 +6,7 @@ Dwarf.name = "Dwarf"
 Dwarf.sprite = {x = 0, y = 0, scale = 2.25}
 
 function Dwarf:move(movement, actor, direction, destination)
-    return movement:pushChain(actor, destination, direction, 1)
+    return movement:pushChain(actor, destination, direction, 1, 1)
 end
 
 return Dwarf

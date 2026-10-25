@@ -8,6 +8,7 @@ local suites = {
     {name = "target_component", tests = require("tests.target_component")},
     {name = "bonfire_component", tests = require("tests.bonfire_component")},
     {name = "level_loader", tests = require("tests.level_loader")},
+    {name = "level_preview", tests = require("tests.level_preview")},
     {name = "triggers", tests = require("tests.triggers")},
     {name = "level_progress", tests = require("tests.level_progress")},
     {name = "analytics", tests = require("tests.analytics")},
