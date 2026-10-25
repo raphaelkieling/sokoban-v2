@@ -11,6 +11,13 @@ vec4 effect(vec4 color, Image texture, vec2 textureCoordinates, vec2 screenCoord
 }
 ]]
 
+local whiteFlashShaderSource = [[
+vec4 effect(vec4 color, Image texture, vec2 textureCoordinates, vec2 screenCoordinates) {
+	vec4 pixel = Texel(texture, textureCoordinates);
+	return vec4(1.0, 1.0, 1.0, pixel.a) * color;
+}
+]]
+
 local sweepOutlineShaderSource = [[
 extern vec4 frameUV;
 extern float sweepProgress;
@@ -46,11 +53,13 @@ function Assets.new()
         tileColumns = tiles:getWidth() / 32,
         outlineShader = love.graphics.newShader(outlineShaderSource),
 		sweepOutlineShader = love.graphics.newShader(sweepOutlineShaderSource),
+		whiteFlashShader = love.graphics.newShader(whiteFlashShaderSource),
     }, Assets)
 end
 
 function Assets:tileRenderer(scale, layer)
-	return SpriteRenderer(self.tiles, scale or 2, layer, self.outlineShader, self.sweepOutlineShader)
+	return SpriteRenderer(self.tiles, scale or 2, layer, self.outlineShader,
+		self.sweepOutlineShader, self.whiteFlashShader)
 end
 
 function Assets:tilesetImage(tileset)
@@ -66,7 +75,7 @@ end
 
 function Assets:tilesetRenderer(tileset, scale, layer)
 	return SpriteRenderer(self:tilesetImage(tileset), scale or 2, layer,
-		self.outlineShader, self.sweepOutlineShader)
+		self.outlineShader, self.sweepOutlineShader, self.whiteFlashShader)
 end
 
 function Assets:tileAnimation(tileX, tileY)
@@ -135,7 +144,7 @@ end
 
 function Assets:playerRenderer(scale, layer)
     return SpriteRenderer(self.players, scale or 2.25, layer or 3,
-		self.outlineShader, self.sweepOutlineShader)
+		self.outlineShader, self.sweepOutlineShader, self.whiteFlashShader)
 end
 
 return Assets

@@ -10,6 +10,7 @@ return {
         title = "Select level",
         page = "A/D or < / >  |  Page %d/%d",
         preview_unavailable = "Preview unavailable",
+		locked = "Locked",
     },
     analytics = {
         title = "Analytics",

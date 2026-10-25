@@ -66,13 +66,29 @@ end
 function LevelSelect:drawPreview(width, height, scale)
 	local level = self.levels[self.selected]
 	if not level then return end
-	self:preparePreview(level)
+	local unlocked = self.game.levelProgress:isUnlocked(self.levels, self.selected)
 
 	local panelWidth = math.min(width * 0.44, 560 * scale)
 	local panelHeight = panelWidth * PREVIEW_HEIGHT / PREVIEW_WIDTH + 24 * scale
 	local panelX = width * 0.53
 	local panelY = height * 0.31
 	UI.drawPanel(panelX, panelY, panelWidth, panelHeight)
+	if not unlocked then
+		if self.previewCanvas then
+			self.previewCanvas:release()
+			self.previewCanvas = nil
+		end
+		self.previewKey = nil
+		self.previewUnavailable = false
+		UI.setColor("muted")
+		UI.setMenuFont(20, width, height)
+		local font = love.graphics.getFont()
+		love.graphics.printf(I18n.t("levels.locked"), panelX + 12 * scale,
+			panelY + (panelHeight - font:getHeight()) / 2,
+			panelWidth - 24 * scale, "center")
+		return
+	end
+	self:preparePreview(level)
 	if not self.previewCanvas then
 		if self.previewUnavailable then
 			UI.setColor("muted")
@@ -116,9 +132,11 @@ function LevelSelect:draw()
     for index = firstVisible, lastVisible do
         local level = self.levels[index]
         local label = level.name or string.format("lvl_%d.txt", level.number)
-		UI.drawTwoColumnMenuItem(label, "", index == self.selected,
+		local unlocked = self.game.levelProgress:isUnlocked(self.levels, index)
+		local status = unlocked and "" or I18n.t("levels.locked")
+		UI.drawTwoColumnMenuItem(label, status, index == self.selected,
 			rowY + (index - firstVisible) * rowHeight, width, height, 27,
-			selectorWidth, selectorCenter)
+			selectorWidth, selectorCenter, not unlocked)
 
         if self.game.levelProgress:isCompleted(level.key or level.path) then
             local x = selectorCenter + selectorWidth / 2 - 13 * scale
@@ -154,7 +172,8 @@ function LevelSelect:keypressed(key)
         self.selected = (self.page - 1) * PAGE_SIZE + 1
         self.game.audio:play("menuSelect")
     elseif Keymap.matches("confirm", key) then
-        if self.levels[self.selected] then
+		if self.levels[self.selected]
+			and self.game.levelProgress:isUnlocked(self.levels, self.selected) then
             self.game.audio:play("menuClick")
             self.game.scenes:switch("playing", self.selected)
         end

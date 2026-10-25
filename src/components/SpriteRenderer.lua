@@ -3,7 +3,7 @@ local Component = require("src.core.Component")
 local SpriteRenderer = Component:extend()
 SpriteRenderer.componentName = "SpriteRenderer"
 
-function SpriteRenderer:init(image, scale, renderLayer, outlineShader, sweepOutlineShader)
+function SpriteRenderer:init(image, scale, renderLayer, outlineShader, sweepOutlineShader, whiteFlashShader)
     Component.init(self)
     self.image = image
     self.scale = scale or 1
@@ -11,6 +11,8 @@ function SpriteRenderer:init(image, scale, renderLayer, outlineShader, sweepOutl
     self.outlineShader = outlineShader
 	self.sweepOutlineShader = sweepOutlineShader
 	self.whiteShader = outlineShader
+	self.whiteFlashShader = whiteFlashShader
+	self.whiteFlash = nil
 	self.undoFeedback = nil
 end
 
@@ -22,10 +24,18 @@ function SpriteRenderer:playUndo(fromX, fromY, toX, toY)
 end
 
 function SpriteRenderer:update(dt)
+	if self.whiteFlash then
+		self.whiteFlash.elapsed = self.whiteFlash.elapsed + dt
+		if self.whiteFlash.elapsed >= self.whiteFlash.duration then self.whiteFlash = nil end
+	end
 	local feedback = self.undoFeedback
 	if not feedback then return end
 	feedback.elapsed = feedback.elapsed + dt
 	if feedback.elapsed >= feedback.duration then self.undoFeedback = nil end
+end
+
+function SpriteRenderer:playWhiteFlash(duration)
+	self.whiteFlash = {elapsed = 0, duration = duration or 0.16}
 end
 
 function SpriteRenderer:draw(context)
@@ -92,6 +102,13 @@ function SpriteRenderer:draw(context)
 	love.graphics.setColor(1, 1, 1, alpha)
 	animation:render(self.image, x, y, self.scale,
 		context and context.selected and self.outlineShader or nil, rotation, scaleX, scaleY)
+	local flash = self.whiteFlash
+	if flash and self.whiteFlashShader then
+		local progress = math.min(flash.elapsed / flash.duration, 1)
+		local opacity = 0.9 * (1 - progress)
+		animation:renderSilhouette(self.image, x, y, self.scale,
+			self.whiteFlashShader, opacity * alpha, rotation, scaleX, scaleY)
+	end
 	love.graphics.pop()
 end
 

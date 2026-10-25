@@ -77,6 +77,8 @@ function AudioManager.new(catalog, preferences)
     local self = setmetatable({
         sources = {},
         musicSources = {},
+        musicPlaylist = nil,
+        musicPlaylistIndex = nil,
         preferences = preferences,
         volume = math.max(0, math.min(1, AudioConfig.volume)),
         musicVolume = math.max(0, math.min(1, musicVolume)),
@@ -142,11 +144,59 @@ function AudioManager:registerMusicSource(source, baseVolume)
 end
 
 function AudioManager:playMusic(file, baseVolume)
+	self.musicPlaylist = nil
+	self.musicPlaylistIndex = nil
     local source = love.audio.newSource(file, "stream")
     source:setLooping(true)
     self:registerMusicSource(source, baseVolume)
     source:play()
     return source
+end
+
+function AudioManager:playMusicPlaylist(files, baseVolume)
+	if type(files) ~= "table" or #files == 0 then return false end
+	for _, entry in ipairs(self.musicSources) do
+		if entry.source.stop then entry.source:stop() end
+	end
+	self.musicSources = {}
+	self.musicPlaylist = {}
+	self.musicPlaylistIndex = 0
+	for _, file in ipairs(files) do
+		local source = love.audio.newSource(file, "stream")
+		source:setLooping(false)
+		self.musicPlaylist[#self.musicPlaylist + 1] = self:registerMusicSource(source, baseVolume)
+	end
+	self:_playNextMusicTrack()
+	return true
+end
+
+function AudioManager:playMusicDirectory(directory, baseVolume)
+	local files = {}
+	local supportedExtensions = {mp3 = true, ogg = true, wav = true, flac = true}
+	for _, name in ipairs(love.filesystem.getDirectoryItems(directory)) do
+		local extension = name:lower():match("%.([%w]+)$")
+		if supportedExtensions[extension] then
+			files[#files + 1] = directory .. "/" .. name
+		end
+	end
+	table.sort(files)
+	return self:playMusicPlaylist(files, baseVolume)
+end
+
+function AudioManager:_playNextMusicTrack()
+	if not self.musicPlaylist or #self.musicPlaylist == 0 then return false end
+	self.musicPlaylistIndex = self.musicPlaylistIndex % #self.musicPlaylist + 1
+	local source = self.musicPlaylist[self.musicPlaylistIndex]
+	self.currentMusicSource = source
+	source:play()
+	return true
+end
+
+function AudioManager:update()
+	if self.musicPlaylist and self.currentMusicSource
+		and not self.currentMusicSource:isPlaying() then
+		self:_playNextMusicTrack()
+	end
 end
 
 function AudioManager:getVolume()

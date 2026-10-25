@@ -192,4 +192,49 @@ function tests.main_theme_streams_loops_and_starts_with_music_volume()
 	_G.love = previousLove
 end
 
+function tests.music_playlist_rotates_tracks_in_sorted_order_at_reduced_volume()
+	local previousLove = love
+	local createdSources = {}
+	local fileNames = {"Pixel 4.mp3", "Pixel 2.mp3", "Pixel 3.mp3"}
+	_G.love = {
+		audio = {
+			newSource = function(path, sourceType)
+				local source = {
+					path = path,
+					type = sourceType,
+					playing = false,
+					setVolume = function(self, volume) self.volume = volume end,
+					setLooping = function(self, looping) self.looping = looping end,
+					play = function(self) self.playing = true end,
+					stop = function(self) self.playing = false end,
+					isPlaying = function(self) return self.playing end,
+				}
+				createdSources[#createdSources + 1] = source
+				return source
+			end,
+		},
+		filesystem = {getDirectoryItems = function() return fileNames end},
+	}
+
+	local manager = AudioManager.new({})
+	assert(manager:playMusicDirectory("assets/music", 0.12))
+	assert(createdSources[1].path == "assets/music/Pixel 2.mp3",
+		"playlist order should be stable regardless of filesystem enumeration order")
+	assert(createdSources[1].looping == false)
+	assert(math.abs(createdSources[1].volume - 0.09) < 0.000001,
+		"background music should use a lower base level")
+	createdSources[1].playing = false
+	manager:update()
+	assert(createdSources[2].playing and createdSources[2].path == "assets/music/Pixel 3.mp3",
+		"finishing a track should start the next one")
+	createdSources[2].playing = false
+	manager:update()
+	assert(createdSources[3].playing, "the playlist should reach its final track")
+	createdSources[3].playing = false
+	manager:update()
+	assert(createdSources[1].playing, "the playlist should wrap around to its first track")
+
+	_G.love = previousLove
+end
+
 return tests

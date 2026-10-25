@@ -35,7 +35,7 @@ function Game.new()
     self.assets = Assets.new()
     self.mobileControls = MobileControls.new()
     self.audio = AudioManager.new(nil, self.preferences)
-    self.audio:playMusic("assets/music/Pixel 3.mp3", 0.2)
+    self.audio:playMusicDirectory("assets/music", 0.12)
     self.scenes = SceneManager(self)
     self.crt = CRT()
     self.levelProgress = LevelProgress.new()
@@ -61,6 +61,7 @@ function Game.new()
 end
 
 function Game:update(dt)
+    self.audio:update()
     if self.console then
         if self.console.open then return end
     end

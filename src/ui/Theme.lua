@@ -55,7 +55,7 @@ function Theme.drawMenuItem(label, selected, centerY, width, height, fontSize, m
 end
 
 function Theme.drawTwoColumnMenuItem(leftLabel, rightLabel, selected, centerY,
-	width, height, fontSize, fixedWidth, centerX)
+	width, height, fontSize, fixedWidth, centerX, disabled)
 	Theme.setMenuFont(fontSize, width, height)
 	local font = love.graphics.getFont()
 	local scale = Theme.scale(width, height)
@@ -67,11 +67,17 @@ function Theme.drawTwoColumnMenuItem(leftLabel, rightLabel, selected, centerY,
 	local textY = y + (itemHeight - font:getHeight()) / 2
 
 	if selected then
-		love.graphics.setColor(Theme.colors.selected)
+		local alpha = disabled and 0.28 or 1
+		love.graphics.setColor(Theme.colors.selected[1], Theme.colors.selected[2],
+			Theme.colors.selected[3], alpha)
 		love.graphics.rectangle("fill", x, y, itemWidth, itemHeight,
 			2 * scale, 2 * scale, 4)
 	end
-	love.graphics.setColor(selected and Theme.colors.selectedText or Theme.colors.text)
+	if disabled then
+		Theme.setColor("muted", selected and 0.82 or 0.48)
+	else
+		love.graphics.setColor(selected and Theme.colors.selectedText or Theme.colors.text)
+	end
 	if rightLabel == nil or rightLabel == "" then
 		love.graphics.printf(string.upper(leftLabel or ""), x + padding, textY,
 			itemWidth - padding * 2, "left")

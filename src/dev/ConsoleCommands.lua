@@ -65,6 +65,23 @@ function ConsoleCommands.register(console)
 		return "Audio " .. (enabled and "muted" or "unmuted") .. "."
 	end)
 
+	console:registerCommand("reset-save", "clear completed-level progress", function(context)
+		local progress = context and context.game and context.game.levelProgress
+		if not progress then return "Level progress is unavailable." end
+		if not progress:reset() then return "Could not reset level progress save." end
+		return "Level progress save reset."
+	end)
+
+	console:registerCommand("unlock-all-levels", "mark every available level as completed", function(context)
+		local progress = context and context.game and context.game.levelProgress
+		if not progress then return "Level progress is unavailable." end
+		local ok, levels = pcall(LevelLoader.listLevels)
+		if not ok then return "Could not load the level list." end
+		local saved, count = progress:markAllCompleted(levels)
+		if not saved then return "Could not update level progress save." end
+		return string.format("All levels marked completed (%d new).", count)
+	end)
+
 	console:registerToggleCommand("show-undo-history", "show player paths for each undo", function(context, enabled)
 		local board = context and context.board
 		if board then board.debugShowUndoHistory = enabled end

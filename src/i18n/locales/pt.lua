@@ -10,6 +10,7 @@ return {
         title = "Selecionar fase",
         page = "A/D ou < / >  |  Página %d/%d",
         preview_unavailable = "Prévia indisponível",
+		locked = "Bloqueado",
     },
     analytics = {
         title = "Estatísticas",

@@ -10,6 +10,7 @@ return {
         title = "Seleccionar nivel",
         page = "A/D o < / >  |  Página %d/%d",
         preview_unavailable = "Vista previa no disponible",
+		locked = "Bloqueado",
     },
     analytics = {
         title = "Estadísticas",

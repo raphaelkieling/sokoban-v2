@@ -34,6 +34,16 @@ function Animation:render(image, x, y, scale, shader, rotation, scaleX, scaleY)
 	animation:draw(image, x, y, rotation, scaleX, scaleY, 16, 16)
 end
 
+function Animation:renderSilhouette(image, x, y, scale, shader, opacity, rotation, scaleX, scaleY)
+	local animation = self.current
+	rotation = rotation or 0
+	scaleX, scaleY = scale * (scaleX or 1), scale * (scaleY or 1)
+	love.graphics.setColor(1, 1, 1, opacity or 1)
+	love.graphics.setShader(shader)
+	animation:draw(image, x, y, rotation, scaleX, scaleY, 16, 16)
+	love.graphics.setShader()
+end
+
 function Animation:renderSweepOutline(image, x, y, scale, shader, progress, opacity,
 	rotation, scaleX, scaleY)
 	local animation = self.current

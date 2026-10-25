@@ -58,6 +58,8 @@ function Grass:setState(state)
 	self.state = state
 	self.components.Animation:set(self:stateAnimation(state))
 	self:updateWalkability()
+	local renderer = self.owner and self.owner:getComponent("SpriteRenderer")
+	if renderer then renderer:playWhiteFlash() end
 	return true
 end
 
