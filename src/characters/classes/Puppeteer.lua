@@ -3,6 +3,7 @@ local CharacterClass = require("src.characters.CharacterClass")
 local Puppeteer = CharacterClass:extend()
 Puppeteer.id = "puppeteer"
 Puppeteer.name = "Puppeteer"
+Puppeteer.selectionVoiceSound = "puppeteerVoice"
 Puppeteer.sprite = {x = 0, y = 6, scale = 2.25}
 
 local function copyTethers(tethers)

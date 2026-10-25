@@ -3,7 +3,8 @@ local CharacterClass = require("src.characters.CharacterClass")
 local Farmer = CharacterClass:extend()
 Farmer.id = "farmer"
 Farmer.name = "Farmer"
-Farmer.sprite = {x = 2, y = 5, scale = 2.25}
+Farmer.selectionVoiceSound = "farmerVoice"
+Farmer.sprite = {x = 2, y = 4, scale = 2.25}
 
 function Farmer:move(movement, actor, _direction, destination)
 	local grass = movement:componentAt(destination.x, destination.y, "Grass")

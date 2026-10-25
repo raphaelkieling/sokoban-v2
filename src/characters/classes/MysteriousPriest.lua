@@ -3,6 +3,7 @@ local CharacterClass = require("src.characters.CharacterClass")
 local MysteriousPriest = CharacterClass:extend()
 MysteriousPriest.id = "mysterious_priest"
 MysteriousPriest.name = "Mysterious Priest"
+MysteriousPriest.selectionVoiceSound = "mysteriousPriestVoice"
 MysteriousPriest.sprite = {x = 6, y = 2, scale = 2.25}
 
 function MysteriousPriest:move(movement, actor, direction, destination)

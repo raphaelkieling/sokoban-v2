@@ -24,6 +24,7 @@ local CAMERA_SMOOTHING = 9
 local MOVE_REPEAT_DELAY = 0.3
 local MOVE_REPEAT_INTERVAL = 0.12
 local UNDO_REPEAT_INTERVAL = 0.6
+local SELECTION_VOICE_CHANCE = 0.4
 
 local function boxesOnTargets(board)
 	local boxes = {}
@@ -308,6 +309,11 @@ end
 
 function PlayingScene:emitPlayerSwitch(change)
 	if change then
+		local player = self.board and self.board.players[change.to]
+		local characterClass = player and player:getComponent("CharacterClass")
+		if characterClass and characterClass.selectionVoiceSound and math.random() < SELECTION_VOICE_CHANCE then
+			self.game.audio:playRandom(characterClass.selectionVoiceSound)
+		end
 		self.game.events:emit("player.switched", change)
 	end
 end

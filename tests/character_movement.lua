@@ -20,6 +20,11 @@ local EventEmitter = require("src.core.EventEmitter")
 
 local tests = {}
 
+function tests.farmer_uses_the_female_rogues_sprite()
+	local farmer = CharacterClasses.create(Player.Classes.FARMER)
+	assert(farmer.sprite.x == 2 and farmer.sprite.y == 4)
+end
+
 local function makeBoard(xStart, xEnd, y, walls)
     local board = Board(nil, xEnd - xStart + 1, 1)
     for x = xStart, xEnd do

@@ -3,6 +3,7 @@ local CharacterClass = require("src.characters.CharacterClass")
 local Wizard = CharacterClass:extend()
 Wizard.id = "wizard"
 Wizard.name = "Wizard"
+Wizard.selectionVoiceSound = "wizardVoice"
 Wizard.sprite = {x = 1, y = 4, scale = 2.25}
 
 function Wizard:canEnterBlockedTile(movement, destination, direction, actor)

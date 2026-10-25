@@ -55,6 +55,18 @@ local function createSource(definition)
     return love.audio.newSource(synthesize(definition.synthesis))
 end
 
+local function createVariants(files, definition)
+    local variants = {}
+    if files then
+        for _, file in ipairs(files) do
+            variants[#variants + 1] = {sources = {createSource({file = file})}}
+        end
+    elseif definition then
+        variants[1] = {sources = {createSource(definition)}}
+    end
+    return variants
+end
+
 function AudioManager.new(catalog, preferences)
     local muted = AudioConfig.muted == true
     local musicVolume = AudioConfig.musicVolume or 1
@@ -65,15 +77,46 @@ function AudioManager.new(catalog, preferences)
     local self = setmetatable({
         sources = {},
         musicSources = {},
+        preferences = preferences,
         volume = math.max(0, math.min(1, AudioConfig.volume)),
         musicVolume = math.max(0, math.min(1, musicVolume)),
         muted = muted,
     }, AudioManager)
     for name, definition in pairs(catalog or SoundCatalog) do
-        local source = createSource(definition)
         local baseVolume = definition.volume or 1
-        source:setVolume(baseVolume * self:_effectiveVolume())
-        self.sources[name] = {sources = {source}, baseVolume = baseVolume}
+        local localizedVariants = {}
+        if definition.localizedFiles then
+            for language, files in pairs(definition.localizedFiles) do
+                localizedVariants[language] = createVariants(files)
+            end
+        else
+            localizedVariants.default = createVariants(definition.files, definition)
+        end
+
+        local defaultVariants = localizedVariants.default or localizedVariants.en
+        if not defaultVariants then
+            for _, variants in pairs(localizedVariants) do
+                defaultVariants = variants
+                break
+            end
+        end
+        defaultVariants = defaultVariants or {}
+
+        local sources = {}
+        for _, variants in pairs(localizedVariants) do
+            for _, variant in ipairs(variants) do
+                local source = variant.sources[1]
+                source:setVolume(baseVolume * self:_effectiveVolume())
+                sources[#sources + 1] = source
+            end
+        end
+        self.sources[name] = {
+            sources = sources,
+            variants = defaultVariants,
+            localizedVariants = localizedVariants,
+            baseVolume = baseVolume,
+            lastRandomVariant = nil,
+        }
     end
     return self
 end
@@ -153,6 +196,45 @@ function AudioManager:play(name)
     local source = pool[1]:clone()
     source:setVolume(entry.baseVolume * self:_effectiveVolume())
     pool[#pool + 1] = source
+    source:play()
+    return true
+end
+
+function AudioManager:playRandom(name, language)
+    local entry = self.sources[name]
+    if not entry then return false end
+    language = language or (self.preferences and self.preferences:get("language"))
+    local variants = entry.localizedVariants[language]
+        or entry.localizedVariants.en
+        or entry.localizedVariants.default
+        or entry.variants
+    if not variants or #variants == 0 then return false end
+
+    local variantIndex
+    if #variants == 1 then
+        variantIndex = 1
+    else
+        variantIndex = math.random(#variants - 1)
+        if entry.lastRandomVariant and variantIndex >= entry.lastRandomVariant then
+            variantIndex = variantIndex + 1
+        end
+    end
+    entry.lastRandomVariant = variantIndex
+
+    local variant = variants[variantIndex]
+    local source
+    for _, candidate in ipairs(variant.sources) do
+        if not candidate:isPlaying() then
+            source = candidate
+            break
+        end
+    end
+    if not source then
+        source = variant.sources[1]:clone()
+        source:setVolume(entry.baseVolume * self:_effectiveVolume())
+        variant.sources[#variant.sources + 1] = source
+        entry.sources[#entry.sources + 1] = source
+    end
     source:play()
     return true
 end

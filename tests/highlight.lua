@@ -6,7 +6,7 @@ local tests = {}
 
 function tests.highlight_runs_on_a_configurable_interval_and_expires()
 	local object = GameObject("test-object")
-	local highlight = Highlight({interval = 6, duration = 0.4})
+	local highlight = Highlight({interval = 6, duration = 0.4, velocity = 900})
 	object:addComponent(Transform(1, 2, 64, 2))
 	object:addComponent(highlight)
 

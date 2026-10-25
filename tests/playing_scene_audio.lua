@@ -2,6 +2,61 @@ local PlayingScene = require("src.screens.PlayingScene")
 
 local tests = {}
 
+function tests.selecting_a_class_has_a_forty_percent_chance_to_play_its_voice()
+	local previousRandom = math.random
+	math.random = function() return 0.39 end
+	local played, emitted = {}, {}
+	local selectedPlayer = {
+		getComponent = function(_, name)
+			if name == "CharacterClass" then
+				return {selectionVoiceSound = "wizardVoice"}
+			end
+		end,
+	}
+	local scene = {
+		board = {players = {selectedPlayer}},
+		game = {
+			audio = {playRandom = function(_, sound) played[#played + 1] = sound end},
+			events = {emit = function(_, name, payload)
+				emitted[#emitted + 1] = {name = name, payload = payload}
+			end},
+		},
+	}
+
+	local change = {from = 1, to = 1}
+	PlayingScene.emitPlayerSwitch(scene, change)
+	math.random = previousRandom
+	assert(played[1] == "wizardVoice")
+	assert(emitted[1].name == "player.switched")
+end
+
+function tests.selecting_a_class_can_skip_its_voice_without_skipping_selection_event()
+	local previousRandom = math.random
+	math.random = function() return 0.4 end
+	local played, emitted = {}, {}
+	local selectedPlayer = {
+		getComponent = function(_, name)
+			if name == "CharacterClass" then
+				return {selectionVoiceSound = "wizardVoice"}
+			end
+		end,
+	}
+	local scene = {
+		board = {players = {selectedPlayer}},
+		game = {
+			audio = {playRandom = function(_, sound) played[#played + 1] = sound end},
+			events = {emit = function(_, name, payload)
+				emitted[#emitted + 1] = {name = name, payload = payload}
+			end},
+		},
+	}
+
+	PlayingScene.emitPlayerSwitch(scene, {from = 1, to = 1})
+	math.random = previousRandom
+	assert(#played == 0, "the voice should be skipped when the random roll is outside the 40% chance")
+	assert(emitted[1].name == "player.switched", "selection event should always be emitted")
+end
+
 function tests.wizard_swap_plays_teleport_sound()
 	local played = {}
 	local player = {}
