@@ -98,6 +98,14 @@ function AudioManager:registerMusicSource(source, baseVolume)
     return source
 end
 
+function AudioManager:playMusic(file, baseVolume)
+    local source = love.audio.newSource(file, "stream")
+    source:setLooping(true)
+    self:registerMusicSource(source, baseVolume)
+    source:play()
+    return source
+end
+
 function AudioManager:getVolume()
     return self.volume
 end

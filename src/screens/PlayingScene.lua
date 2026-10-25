@@ -52,17 +52,8 @@ function PlayingScene:init(game)
 	self.camera = cameraLib(0, 0, 1)
 	self.history = ActionHistory()
 	self.playerSelector = PlayerSelector()
-	self.componentStateSubscription = self.game.events:on("component.state_changed", function(payload)
-		if payload.cause ~= "flame" then return end
-		local object = self.board and self.board.objects[payload.objectIndex]
-		if object and payload.component then
-			self.history:appendToLatest({{
-				object = object,
-				component = payload.component,
-				state = payload.previousState,
-			}})
-		end
-	end)
+	self.componentStateSubscription = self.game.events:on("component.state_changed",
+		function(payload) self:onComponentStateChanged(payload) end)
 	self.levelIndex = 1
 	self.transition = nil
 	self.cameraIntro = nil
@@ -77,6 +68,23 @@ function PlayingScene:init(game)
 	self.activatedTriggers = {}
 	self.states = StateMachine(self, PlayingStates)
 	self.hud = self:addChild(PlayingHud(self))
+end
+
+function PlayingScene:onComponentStateChanged(payload)
+	local object = self.board and self.board.objects[payload.objectIndex]
+	if payload.cause == "sink" then
+		if object and object:hasComponent("Player") then self.game.audio:play("bodyFall") end
+		return
+	end
+	if payload.cause ~= "flame" then return end
+	if payload.component == "Grass" then self.game.audio:play("grassFire") end
+	if object and payload.component then
+		self.history:appendToLatest({{
+			object = object,
+			component = payload.component,
+			state = payload.previousState,
+		}})
+	end
 end
 
 function PlayingScene:enter(levelIndex)
@@ -262,7 +270,13 @@ function PlayingScene:movePlayer(direction)
 		moved = moved,
 		stepTaken = moved == true and changes ~= nil and #changes > 0,
 	})
-	self.game.audio:play(moved and "move" or "invalidMovement")
+	local teleported = moved and class.id == "wizard" and changes ~= nil
+		and #changes > 1
+	local changedGrass = moved and class.id == "farmer" and changes ~= nil
+		and #changes == 0
+	local movementSound = changedGrass and "grassChange"
+		or (teleported and "teleport" or (moved and "move" or "invalidMovement"))
+	self.game.audio:play(movementSound)
 	if moved and hasBoxArrivedOnTarget(self.board, previousBoxesOnTargets) then
 		self.game.audio:play("target")
 	end
@@ -417,7 +431,7 @@ function PlayingScene:mobileAction(action)
 		if not self.board:isMoving() then self:undo() end
 		return
 	end
-	self.game.audio:play("uiClick")
+	self.game.audio:play("menuSelect")
 	if action == "a" then
 		if not self.board:isMoving() and #self.board.players > 0 then
 			self:selectNextPlayer()
@@ -478,22 +492,22 @@ function PlayingScene:handlePauseKey(key, completed)
     local optionCount = #self:getPauseOptions(completed)
     if Keymap.matches("menuUp", key) then
         self.pauseSelection = (self.pauseSelection - 2) % optionCount + 1
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuSelect")
     elseif Keymap.matches("menuDown", key) then
         self.pauseSelection = self.pauseSelection % optionCount + 1
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuSelect")
     elseif Keymap.matches("confirm", key) then
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuClick")
         self:choosePauseOption(completed)
     elseif Keymap.matches("cancel", key) then
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuClick")
         if completed then self.game.scenes:switch("levels")
         else self.states:change("playing") end
     end
 end
 
 function PlayingScene:handlePauseAction(action, completed)
-	self.game.audio:play("uiClick")
+	self.game.audio:play("menuClick")
 	if action == "a" then
 		self:choosePauseOption(completed)
 	elseif action == "b" then
@@ -512,7 +526,7 @@ end
 function PlayingScene:handlePlayingKey(key)
     if Keymap.matches("pause", key) then
 		self:clearHeldMovement()
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuClick")
         self.states:change("paused")
         return
     end
@@ -529,7 +543,9 @@ function PlayingScene:handlePlayingKey(key)
     local direction = Keymap.direction(key)
     if direction then
 		if self.playerSelector:isHeld() then
-			self:emitPlayerSwitch(self.playerSelector:selectInDirection(self.board.players, direction))
+			local change = self.playerSelector:selectInDirection(self.board.players, direction)
+			self:emitPlayerSwitch(change)
+			if change then self.game.audio:play("menuSelect") end
 			return
 		end
         self.heldMoveKey = key

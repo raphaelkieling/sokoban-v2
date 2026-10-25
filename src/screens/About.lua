@@ -91,13 +91,13 @@ end
 function About:keypressed(key)
     if Keymap.matches("menuUp", key) then
         self.scrollOffset = math.max(1, self.scrollOffset - 1)
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuSelect")
     elseif Keymap.matches("menuDown", key) then
         self.scrollOffset = math.min(math.max(1, #REFERENCES - self.visibleRows + 1),
             self.scrollOffset + 1)
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuSelect")
     elseif Keymap.matches("cancel", key) or Keymap.matches("confirm", key) then
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuClick")
         self.game.scenes:switch("menu")
     end
 end

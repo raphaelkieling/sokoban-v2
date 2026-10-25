@@ -1,16 +1,8 @@
 -- Set `file` to an audio path to replace a generated sound with an asset.
 return {
     move = {
-        file = nil,
-        volume = 0.38,
-        synthesis = {
-            duration = 0.095,
-            startFrequency = 205,
-            endFrequency = 118,
-            decay = 23,
-            harmonic = 0.28,
-            noise = 0.06,
-        },
+        file = "assets/sounds/footstep.mp3",
+        volume = 0.55,
     },
     invalidMovement = {
         file = nil,
@@ -25,44 +17,35 @@ return {
         },
     },
     undo = {
-        file = nil,
-        volume = 0.3,
-        synthesis = {
-            style = "rewind",
-            duration = 0.18,
-            startFrequency = 920,
-            endFrequency = 340,
-            decay = 17,
-            harmonic = 0.16,
-            noise = 0.36,
-            flutter = 34,
-        },
+        file = "assets/sounds/undo.mp3",
+        volume = 0.65,
+    },
+    teleport = {
+        file = "assets/sounds/teleport.mp3",
+        volume = 0.65,
     },
     target = {
-        file = nil,
-        volume = 0.32,
-        synthesis = {
-            style = "plateClick",
-            duration = 0.11,
-            startFrequency = 1480,
-            endFrequency = 830,
-            decay = 34,
-            harmonic = 0.24,
-            noise = 0.16,
-            clickDecay = 210,
-        },
+        file = "assets/sounds/target_click.mp3",
+        volume = 0.65,
     },
-    uiClick = {
-        file = nil,
-        volume = 0.32,
-        synthesis = {
-            style = "ui",
-            duration = 0.085,
-            startFrequency = 410,
-            endFrequency = 315,
-            decay = 29,
-            harmonic = 0.2,
-            noise = 0,
-        },
+    grassChange = {
+        file = "assets/sounds/grass_cut_grow.mp3",
+        volume = 0.65,
+    },
+    grassFire = {
+        file = "assets/sounds/grass_fire.mp3",
+        volume = 0.65,
+    },
+    bodyFall = {
+        file = "assets/sounds/body_fall.mp3",
+        volume = 0.65,
+    },
+    menuSelect = {
+        file = "assets/sounds/menu_select.mp3",
+        volume = 0.55,
+    },
+    menuClick = {
+        file = "assets/sounds/menu_click.mp3",
+        volume = 0.65,
     },
 }

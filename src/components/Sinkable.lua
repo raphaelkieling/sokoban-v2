@@ -4,6 +4,27 @@ local Component = require("src.core.Component")
 local Sinkable = Component:extend()
 Sinkable.componentName = "Sinkable"
 
+local function emitSinkingEvent(owner, previousState)
+	local board = owner and owner.parent
+	local events = board and board.events
+	if not events then return end
+	local objectIndex
+	for index, object in ipairs(board.objects or {}) do
+		if object == owner then
+			objectIndex = index
+			break
+		end
+	end
+	if not objectIndex then return end
+	events:emit("component.state_changed", {
+		cause = "sink",
+		objectIndex = objectIndex,
+		component = "Sinkable",
+		previousState = previousState,
+		state = "sinking",
+	})
+end
+
 function Sinkable:init()
 	Component.init(self)
 	self.state = "active"
@@ -16,6 +37,7 @@ function Sinkable:setState(state, metadata)
 	assert(state == "active" or state == "approaching" or state == "sinking" or state == "lost",
 		"Sinkable state must be active, approaching, sinking, or lost")
 	if self.state == state then return false end
+	local previousState = self.state
 	self.state = state
 	if state == "approaching" or state == "sinking" then
 		if metadata then
@@ -30,6 +52,7 @@ function Sinkable:setState(state, metadata)
 		self.owner.active = state == "active" or state == "approaching"
 		self.owner.visualOnly = state == "sinking"
 	end
+	if state == "sinking" then emitSinkingEvent(self.owner, previousState) end
 	return true
 end
 

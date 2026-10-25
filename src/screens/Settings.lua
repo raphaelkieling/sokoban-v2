@@ -107,23 +107,23 @@ end
 
 function Settings:keypressed(key)
     if Keymap.matches("cancel", key) then
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuClick")
         self.game.scenes:switch("menu")
     elseif Keymap.matches("menuUp", key) then
         self.selected = (self.selected - 2) % 5 + 1
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuSelect")
     elseif Keymap.matches("menuDown", key) then
         self.selected = self.selected % 5 + 1
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuSelect")
     elseif Keymap.matches("menuPagePrevious", key) then
         self:adjustSelected(-1)
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuSelect")
     elseif Keymap.matches("menuPageNext", key) then
         self:adjustSelected(1)
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuSelect")
     elseif Keymap.matches("confirm", key) then
         self:toggleSelected()
-        self.game.audio:play("uiClick")
+        self.game.audio:play("menuClick")
     end
 end
 

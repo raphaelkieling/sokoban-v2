@@ -13,6 +13,7 @@ local suites = {
     {name = "analytics", tests = require("tests.analytics")},
     {name = "console_commands", tests = require("tests.console_commands")},
     {name = "audio_manager", tests = require("tests.audio_manager")},
+    {name = "playing_scene_audio", tests = require("tests.playing_scene_audio")},
     {name = "scene_manager", tests = require("tests.scene_manager")},
     {name = "preferences", tests = require("tests.preferences")},
     {name = "i18n", tests = require("tests.i18n")},

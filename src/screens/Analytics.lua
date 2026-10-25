@@ -34,7 +34,7 @@ function AnalyticsScreen:draw()
 		{I18n.t("analytics.completion"), string.format("%d%%", completion)},
 	}
 	local rowY = height * 0.25
-	local rowSpacing = height * 0.075
+	local rowSpacing = height * 0.065
 	local contentWidth = math.min(width * 0.78, 650 * scale)
 	local contentX = (width - contentWidth) / 2
 	local padding = 18 * scale
@@ -47,12 +47,9 @@ function AnalyticsScreen:draw()
 		UI.setColor("text")
 		love.graphics.printf(string.upper(row[1]), contentX + padding, textY,
 			labelWidth - padding, "left")
+		UI.setColor("accent")
 		love.graphics.printf(tostring(row[2]), contentX + labelWidth, textY,
 			contentWidth - labelWidth - padding, "right")
-		if index < #rows then
-			UI.drawDivider(contentX, centerY + font:getHeight() / 2 + 4 * scale,
-				contentWidth, math.max(1, scale))
-		end
 	end
 
 	UI.drawMenuItem(I18n.t("analytics.back"), true, height * 0.87,
@@ -62,7 +59,7 @@ end
 
 function AnalyticsScreen:keypressed(key)
 	if Keymap.matches("cancel", key) or Keymap.matches("confirm", key) then
-		self.game.audio:play("uiClick")
+		self.game.audio:play("menuClick")
 		self.game.scenes:switch("menu")
 	end
 end

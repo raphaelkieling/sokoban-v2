@@ -16,6 +16,7 @@ local Shake = require("src.components.Shake")
 local ActionHistory = require("src.game.ActionHistory")
 local SpriteRenderer = require("src.components.SpriteRenderer")
 local Animation = require("src.components.Animation")
+local EventEmitter = require("src.core.EventEmitter")
 
 local tests = {}
 
@@ -671,6 +672,11 @@ end
 
 function tests.player_can_walk_into_passthrough_and_sink()
 	local board = makeBoard(0, 4, 0)
+	board.events = EventEmitter.new()
+	local sinkingEvent
+	board.events:on("component.state_changed", function(payload)
+		if payload.cause == "sink" then sinkingEvent = payload end
+	end)
 	board:setCell(2, 0, {walkable = false, wall = false, passthrough = true})
 	local wizard = spawnPlayer(board, 1, 0, Player.Classes.WIZARD)
 
@@ -680,6 +686,8 @@ function tests.player_can_walk_into_passthrough_and_sink()
 	wizard:update(0.13)
 	assert(wizard:getComponent("Sinkable").state == "sinking",
 		"walking players should only start falling after reaching the pit")
+	assert(sinkingEvent and sinkingEvent.objectIndex == 1,
+		"starting a fall should emit a component state event for the sinking object")
 end
 
 function tests.warrior_marks_a_box_lost_if_the_push_stops_inside_passthrough()
