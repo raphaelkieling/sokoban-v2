@@ -114,8 +114,8 @@ function tests.puppeteer_synchronizes_only_boxes_linked_to_her()
 	assert(#class.tethers == 2,
 		"the boxes touched in the pushed chain should both receive strings")
 	assert(class.tethers[1].parent == puppeteer and class.tethers[1].child == first)
-	assert(class.tethers[2].parent == first and class.tethers[2].child == second,
-		"a box pushed by another box should hang from that box, not directly from the Puppeteer")
+	assert(class.tethers[2].parent == puppeteer and class.tethers[2].child == second,
+		"every box in the pushed chain should be tethered directly to the Puppeteer")
 
 	assert(run(board, puppeteer, {x = 0, y = 1}))
 	assertPosition(puppeteer, 2, 2)
@@ -148,6 +148,26 @@ function tests.puppeteer_links_another_box_when_she_pushes_it()
 	assertPosition(second, 2, 2)
 	assert(#class.tethers == 1,
 		"undo should remove only the thread created by the undone push")
+end
+
+function tests.puppeteer_links_a_box_hit_by_a_tethered_box_directly_to_her()
+	local board = makeRectBoard(7, 5)
+	local puppeteer = spawnPlayer(board, 1, 1, Player.Classes.PUPPETEER)
+	local linked = spawnBox(board, 2, 1)
+	local contacted = nil
+	local class = puppeteer:getComponent("CharacterClass")
+
+	assert(run(board, puppeteer, {x = 1, y = 0}))
+	contacted = spawnBox(board, 3, 2)
+	assert(run(board, puppeteer, {x = 0, y = 1}))
+
+	assertPosition(puppeteer, 2, 2)
+	assertPosition(linked, 3, 2)
+	assertPosition(contacted, 3, 3)
+	assert(#class.tethers == 2)
+	assert(class.tethers[1].parent == puppeteer and class.tethers[1].child == linked)
+	assert(class.tethers[2].parent == puppeteer and class.tethers[2].child == contacted,
+		"an item hit by a tethered item should get its own direct string to the Puppeteer")
 end
 
 function tests.puppeteer_links_and_moves_are_restored_by_undo()
@@ -206,8 +226,8 @@ function tests.puppeteer_blocked_thread_stays_while_player_and_other_threads_mov
 	assertPosition(puppeteer, 2, 2)
 	assertPosition(blockedBox, 3, 1,
 		"the linked box whose destination is blocked should be left behind")
-	assertPosition(movingBox, 4, 1,
-		"a child box should stay with its parent when the parent cannot move")
+	assertPosition(movingBox, 4, 2,
+		"each directly linked box should move independently of another blocked box")
 end
 
 function tests.puppeteer_can_tether_and_synchronize_a_bonfire()
@@ -260,7 +280,7 @@ function tests.puppeteer_tethers_a_blocked_bonfire_and_undo_restores_the_string(
 	assert(#class.tethers == 0, "undo should remove the newly created string")
 end
 
-function tests.puppeteer_tether_tree_moves_children_only_with_their_parent()
+function tests.puppeteer_tethers_every_item_directly_to_her()
 	local board = makeRectBoard(7, 4, {["4:1"] = true})
 	board.assets = {
 		bonfireAnimation = function(_, _, state)
@@ -274,13 +294,13 @@ function tests.puppeteer_tether_tree_moves_children_only_with_their_parent()
 	local class = puppeteer:getComponent("CharacterClass")
 
 	assert(run(board, puppeteer, {x = 1, y = 0}),
-		"a blocked push should still create the tether tree")
+		"a blocked push should still create each direct tether")
 	assertPosition(puppeteer, 1, 1)
 	assertPosition(box, 2, 1)
 	assertPosition(bonfire, 3, 1)
 	assert(class.tethers[1].parent == puppeteer and class.tethers[1].child == box)
-	assert(class.tethers[2].parent == box and class.tethers[2].child == bonfire,
-		"the bonfire's string should start at the box that bumped it")
+	assert(class.tethers[2].parent == puppeteer and class.tethers[2].child == bonfire,
+		"the bonfire should have its own direct string to the Puppeteer")
 
 	board:setCell(4, 1, {walkable = true})
 	assert(run(board, puppeteer, {x = 1, y = 0}))

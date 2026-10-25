@@ -7,6 +7,7 @@ local suites = {
     {name = "board_win_condition", tests = require("tests.board_win_condition")},
     {name = "target_component", tests = require("tests.target_component")},
     {name = "bonfire_component", tests = require("tests.bonfire_component")},
+    {name = "highlight", tests = require("tests.highlight")},
     {name = "level_loader", tests = require("tests.level_loader")},
     {name = "level_preview", tests = require("tests.level_preview")},
     {name = "triggers", tests = require("tests.triggers")},

@@ -1,5 +1,6 @@
 local Component = require("src.core.Component")
 local Animation = require("src.components.Animation")
+local Highlight = require("src.components.Highlight")
 
 -- Owns the bonfire's lit/unlit state and its matching sprite animation.
 local Bonfire = Component:extend()
@@ -13,7 +14,8 @@ function Bonfire:init(assets, tileset, state)
 	assert(self.state == "lit" or self.state == "unlit", "Bonfire state must be 'lit' or 'unlit'")
 	self.components = {}
 	self.componentOrder = {}
-	self:addComponent(Animation(assets:bonfireAnimation(tileset, self.state)))
+    self:addComponent(Animation(assets:bonfireAnimation(tileset, self.state)))
+	self:addComponent(Highlight())
 end
 
 function Bonfire:addComponent(component)

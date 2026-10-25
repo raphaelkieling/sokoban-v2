@@ -21,6 +21,37 @@ function tests.list_levels_uses_ldtk_order_field()
 		"display numbering should follow the sorted sequence")
 end
 
+function tests.skipped_levels_are_removed_from_all_level_lists_and_loading()
+	local project = {levels = {
+		{identifier = "Third", fieldInstances = {
+			{__identifier = "Order", __value = 30},
+			{__identifier = "Skipped", __type = "Bool", __value = false},
+		}},
+		{identifier = "Hidden", fieldInstances = {
+			{__identifier = "Skipped", __type = "Bool", __value = true},
+		}},
+		{identifier = "First", fieldInstances = {
+			{__identifier = "Order", __value = 10},
+			{__identifier = "Skipped", __type = "Bool", __value = false},
+		}},
+	}}
+	local previousLove = rawget(_G, "love")
+	_G.love = {filesystem = {read = function() return json.encode(project) end}}
+	local ok, levels = pcall(LevelLoader.listLevels)
+	_G.love = previousLove
+	assert(ok, levels)
+	assert(#levels == 2, "skipped levels should not be listed for selection")
+	assert(levels[1].identifier == "First" and levels[2].identifier == "Third",
+		"visible levels should retain their LDtk Order")
+	assert(levels[1].number == 0 and levels[2].number == 1,
+		"remaining levels should be renumbered contiguously")
+	_G.love = {filesystem = {read = function() return json.encode(project) end}}
+	local loadOk, loadError = pcall(LevelLoader.load, "maps-v2/Map.ldtk", {}, nil, "Hidden")
+	_G.love = previousLove
+	assert(not loadOk and tostring(loadError):find("LDtk level is skipped", 1, true),
+		"skipped levels should also be rejected when loaded directly")
+end
+
 function tests.passthrough_entity_marks_a_cell_and_overrides_collision_wall()
 	local project = {
 		defs = {

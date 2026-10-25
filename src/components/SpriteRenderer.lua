@@ -3,12 +3,13 @@ local Component = require("src.core.Component")
 local SpriteRenderer = Component:extend()
 SpriteRenderer.componentName = "SpriteRenderer"
 
-function SpriteRenderer:init(image, scale, renderLayer, outlineShader)
+function SpriteRenderer:init(image, scale, renderLayer, outlineShader, sweepOutlineShader)
     Component.init(self)
     self.image = image
     self.scale = scale or 1
     self.renderLayer = renderLayer or 0
     self.outlineShader = outlineShader
+	self.sweepOutlineShader = sweepOutlineShader
 	self.whiteShader = outlineShader
 	self.undoFeedback = nil
 end
@@ -72,6 +73,19 @@ function SpriteRenderer:draw(context)
 		if flash > 0 and self.whiteShader then
 			love.graphics.setColor(1, 1, 1, flash * alpha)
 			animation:render(self.image, x, y, self.scale, self.whiteShader,
+				rotation, scaleX, scaleY)
+		end
+	end
+	local highlight = self.owner:getComponent("Highlight")
+	local highlightPhase = highlight and highlight:phase()
+	if highlightPhase and self.sweepOutlineShader then
+		local canShow = self.owner.active ~= false
+		local sinkable = self.owner:getComponent("Sinkable")
+		if sinkable and sinkable.state ~= "active" then canShow = false end
+		if canShow then
+			love.graphics.setColor(1, 1, 1, alpha)
+			animation:renderSweepOutline(self.image, x, y, self.scale,
+				self.sweepOutlineShader, highlightPhase, highlight:opacity(),
 				rotation, scaleX, scaleY)
 		end
 	end

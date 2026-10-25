@@ -1,10 +1,10 @@
 local Scene = require("src.core.Scene")
 local Keymap = require("src.settings.Keymap")
 local UI = require("src.ui.Theme")
-local GameConfig = require("src.settings.GameConfig")
 local I18n = require("src.i18n.I18n")
 
 local MainMenu = Scene:extend()
+local MENU_TITLE = "Pushcraft"
 
 function MainMenu:init(game)
     Scene.init(self, "MainMenu", game)
@@ -17,11 +17,11 @@ function MainMenu:draw()
     local scale = UI.scale(width, height)
     UI.setLogoFont(116, width, height)
     love.graphics.setColor(0, 0, 0, 0.45)
-    love.graphics.printf(GameConfig.title, 2 * scale, height * 0.17 + 4 * scale,
+    love.graphics.printf(MENU_TITLE, 2 * scale, height * 0.17 + 4 * scale,
         width, "center")
     UI.setColor("accent")
     UI.setLogoFont(116, width, height)
-    love.graphics.printf(GameConfig.title, 0, height * 0.17, width, "center")
+    love.graphics.printf(MENU_TITLE, 0, height * 0.17, width, "center")
 
     local rowY = height * 0.47
     local rowSpacing = 38 * scale

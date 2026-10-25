@@ -39,14 +39,16 @@ function LevelLoader.listLevels()
 	local project = readProject(MAP_PATH)
 	local orderedLevels = {}
 	for index, level in ipairs(project.levels) do
-		local order = getField(level, "Order")
-		assert(type(order) == "number", string.format(
-			"LDtk level %s must have a numeric Order field", tostring(level.identifier)))
-		orderedLevels[#orderedLevels + 1] = {
-			level = level,
-			order = order,
-			projectIndex = index,
-		}
+		if getField(level, "Skipped") ~= true then
+			local order = getField(level, "Order")
+			assert(type(order) == "number", string.format(
+				"LDtk level %s must have a numeric Order field", tostring(level.identifier)))
+			orderedLevels[#orderedLevels + 1] = {
+				level = level,
+				order = order,
+				projectIndex = index,
+			}
+		end
 	end
 	table.sort(orderedLevels, function(a, b)
 		if a.order == b.order then
@@ -57,14 +59,14 @@ function LevelLoader.listLevels()
 
 	local levels = {}
 	local previousOrder
-	for index, entry in ipairs(orderedLevels) do
+	for _, entry in ipairs(orderedLevels) do
 		local level = entry.level
 		assert(entry.order ~= previousOrder, string.format(
 			"LDtk levels must have unique Order values; duplicate Order %s at %s",
 			tostring(entry.order), tostring(level.identifier)))
 		previousOrder = entry.order
 		levels[#levels + 1] = {
-			number = index - 1,
+			number = #levels,
 			name = level.identifier,
 			path = MAP_PATH,
 			identifier = level.identifier,
@@ -337,6 +339,8 @@ function LevelLoader.load(path, assets, events, levelIdentifier)
 	local level
 	for _, candidate in ipairs(project.levels) do
 		if candidate.identifier == levelIdentifier then
+			assert(getField(candidate, "Skipped") ~= true,
+				"LDtk level is skipped: " .. tostring(levelIdentifier))
 			level = candidate
 			break
 		end

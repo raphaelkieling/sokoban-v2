@@ -34,4 +34,30 @@ function Animation:render(image, x, y, scale, shader, rotation, scaleX, scaleY)
 	animation:draw(image, x, y, rotation, scaleX, scaleY, 16, 16)
 end
 
+function Animation:renderSweepOutline(image, x, y, scale, shader, progress, opacity,
+	rotation, scaleX, scaleY)
+	local animation = self.current
+	local frame = animation.frames[animation.position]
+	local frameX, frameY, frameWidth, frameHeight = frame:getViewport()
+	local imageWidth, imageHeight = image:getDimensions()
+	shader:send("frameUV", {
+		frameX / imageWidth, frameY / imageHeight,
+		frameWidth / imageWidth, frameHeight / imageHeight,
+	})
+	shader:send("sweepProgress", progress)
+	shader:send("sweepOpacity", opacity)
+
+	rotation = rotation or 0
+	scaleX, scaleY = scale * (scaleX or 1), scale * (scaleY or 1)
+	love.graphics.setShader(shader)
+	for _, offset in ipairs({
+		{-1.5, 0}, {1.5, 0}, {0, -1.5}, {0, 1.5},
+		{-1.1, -1.1}, {1.1, -1.1}, {-1.1, 1.1}, {1.1, 1.1},
+	}) do
+		animation:draw(image, x + offset[1], y + offset[2], rotation,
+			scaleX, scaleY, 16, 16)
+	end
+	love.graphics.setShader()
+end
+
 return Animation

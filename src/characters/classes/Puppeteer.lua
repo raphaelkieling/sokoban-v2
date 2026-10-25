@@ -24,12 +24,6 @@ local function sameTethers(first, second)
 	return true
 end
 
-local function tetherIndex(tethers, child)
-	for index, tether in ipairs(tethers) do
-		if tether.child == child then return index end
-	end
-end
-
 function Puppeteer:init()
 	CharacterClass.init(self)
 	self.tethers = {}
@@ -47,83 +41,37 @@ function Puppeteer:move(movement, actor, direction, destination)
 	local originalTethers = copyTethers(self.tethers)
 	local tethers = {}
 	for _, tether in ipairs(originalTethers) do
-		local parentIsAlive = tether.parent == actor or movement:position(tether.parent) ~= nil
-		if parentIsAlive and movement:position(tether.child)
+		if movement:position(tether.child)
 			and tether.child:hasComponent("Tetherable") then
-			tethers[#tethers + 1] = tether
+			tethers[#tethers + 1] = {parent = actor, child = tether.child}
 		end
 	end
 
-	local function attach(parent, child)
+	local function attach(child)
 		if not child or child == actor or not child:hasComponent("Tetherable")
 			or not movement:position(child) then
 			return false
 		end
-
-		-- Refuse a link that would make a cycle in the string tree.
-		local ancestor = parent
-		while ancestor and ancestor ~= actor do
-			if ancestor == child then return false end
-			local index = tetherIndex(tethers, ancestor)
-			ancestor = index and tethers[index].parent or nil
+		for _, tether in ipairs(tethers) do
+			if tether.child == child then return false end
 		end
-
-		local index = tetherIndex(tethers, child)
-		if index then
-			if tethers[index].parent == parent then return false end
-			tethers[index] = {parent = parent, child = child}
-		else
-			tethers[#tethers + 1] = {parent = parent, child = child}
-		end
+		tethers[#tethers + 1] = {parent = actor, child = child}
 		return true
 	end
-
-	local function childrenOf(parent)
-		local children = {}
-		for _, tether in ipairs(tethers) do
-			if tether.parent == parent then children[#children + 1] = tether.child end
+	local function collectChain(x, y, except)
+		local chain = {}
+		local tetherable = true
+		while movement:canWalk(x, y) do
+			local object = movement:objectAt(x, y, except)
+			if not object then break end
+			if not object:hasComponent("Tetherable") then
+				tetherable = false
+				break
+			end
+			chain[#chain + 1] = object
+			x, y = x + direction.x, y + direction.y
 		end
-		return children
-	end
-
-	local function propagateFrom(parent, tryMove)
-		for _, child in ipairs(childrenOf(parent)) do tryMove(child) end
-	end
-
-	local moving, results = {}, {}
-	local tryMove
-	tryMove = function(object)
-		if results[object] ~= nil then return results[object] end
-		if moving[object] then return false end
-		moving[object] = true
-
-		local position = movement:position(object)
-		if not position then
-			moving[object] = nil
-			results[object] = false
-			return false
-		end
-
-		local nextX, nextY = position.x + direction.x, position.y + direction.y
-		local blocker = movement:objectAt(nextX, nextY, object)
-		if blocker and blocker ~= actor and blocker:hasComponent("Tetherable") then
-			attach(object, blocker)
-			tryMove(blocker)
-		end
-
-		local moved = movement:canEnter(nextX, nextY, object)
-			and movement:objectAt(nextX, nextY, object) == nil
-		if moved then
-			movement:moveObject(object, nextX, nextY)
-		else
-			movement:markBlocked(movement:objectAt(nextX, nextY, object) or object)
-		end
-		moving[object] = nil
-		results[object] = moved
-
-		-- A child follows only after its parent has actually moved.
-		if moved then propagateFrom(object, tryMove) end
-		return moved
+		return chain, tetherable
 	end
 
 	local touched = movement:objectAt(destination.x, destination.y, actor)
@@ -131,20 +79,55 @@ function Puppeteer:move(movement, actor, direction, destination)
 		movement:markBlocked(touched)
 		return false
 	end
-	if touched then attach(actor, touched) end
-
-	local actorCanMove = true
+	local actorCanMove
+	local pushed = {}
 	if touched then
-		actorCanMove = tryMove(touched)
-		if actorCanMove then
-			actorCanMove = movement:enter(actor, destination.x, destination.y)
+		local chain, chainIsTetherable = collectChain(destination.x, destination.y, actor)
+		for _, object in ipairs(chain) do attach(object) end
+		if chainIsTetherable then
+			actorCanMove = movement:pushChain(actor, destination, direction, 1)
+			if actorCanMove then
+				for _, object in ipairs(chain) do pushed[object] = true end
+			end
+		else
+			movement:markBlocked(touched)
+			actorCanMove = false
 		end
 	else
 		actorCanMove = movement:enter(actor, destination.x, destination.y)
 	end
 
 	if actorCanMove then
-		propagateFrom(actor, tryMove)
+		local following = {}
+		for _, tether in ipairs(tethers) do
+			if not pushed[tether.child] then following[#following + 1] = tether.child end
+		end
+		-- Let the foremost directly-tethered objects move first so a line of
+		-- connected boxes can follow without one blocking the next. If a tether
+		-- bumps a new tetherable object, it gets its own string to the Puppeteer.
+		table.sort(following, function(first, second)
+			local firstPosition = movement:position(first)
+			local secondPosition = movement:position(second)
+			return firstPosition.x * direction.x + firstPosition.y * direction.y
+				> secondPosition.x * direction.x + secondPosition.y * direction.y
+		end)
+		local movedWithChain = {}
+		for _, object in ipairs(following) do
+			if not movedWithChain[object] then
+				local position = movement:position(object)
+				local nextX, nextY = position.x + direction.x, position.y + direction.y
+				local chain, chainIsTetherable = collectChain(nextX, nextY, object)
+				for _, child in ipairs(chain) do attach(child) end
+				if chainIsTetherable then
+					if movement:pushChain(object, {x = nextX, y = nextY}, direction, 1) then
+						movedWithChain[object] = true
+						for _, child in ipairs(chain) do movedWithChain[child] = true end
+					end
+				else
+					movement:markBlocked(movement:objectAt(nextX, nextY, object) or object)
+				end
+			end
+		end
 	end
 
 	if not sameTethers(originalTethers, tethers) then

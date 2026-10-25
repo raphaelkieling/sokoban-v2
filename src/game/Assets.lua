@@ -11,6 +11,25 @@ vec4 effect(vec4 color, Image texture, vec2 textureCoordinates, vec2 screenCoord
 }
 ]]
 
+local sweepOutlineShaderSource = [[
+extern vec4 frameUV;
+extern float sweepProgress;
+extern float sweepOpacity;
+
+vec4 effect(vec4 color, Image texture, vec2 textureCoordinates, vec2 screenCoordinates) {
+	vec4 pixel = Texel(texture, textureCoordinates);
+	if (pixel.a <= 0.0) return vec4(0.0);
+
+	vec2 localUV = (textureCoordinates - frameUV.xy) / frameUV.zw;
+	float angle = atan(localUV.y - 0.5, localUV.x - 0.5) / 6.28318530718;
+	angle = mod(angle + 1.0, 1.0);
+	float behindHead = mod(sweepProgress - angle + 1.0, 1.0);
+	float trailLength = 0.16;
+	float alpha = 1.0 - smoothstep(trailLength * 0.65, trailLength, behindHead);
+	return vec4(0.92, 0.95, 1.0, alpha * sweepOpacity * color.a);
+}
+]]
+
 function Assets.new()
     local tiles = love.graphics.newImage("assets/tiles.png")
     local players = love.graphics.newImage("assets/rogues.png")
@@ -26,11 +45,12 @@ function Assets.new()
         playerGrid = anim8.newGrid(32, 32, players:getWidth(), players:getHeight()),
         tileColumns = tiles:getWidth() / 32,
         outlineShader = love.graphics.newShader(outlineShaderSource),
+		sweepOutlineShader = love.graphics.newShader(sweepOutlineShaderSource),
     }, Assets)
 end
 
 function Assets:tileRenderer(scale, layer)
-	return SpriteRenderer(self.tiles, scale or 2, layer, self.outlineShader)
+	return SpriteRenderer(self.tiles, scale or 2, layer, self.outlineShader, self.sweepOutlineShader)
 end
 
 function Assets:tilesetImage(tileset)
@@ -45,7 +65,8 @@ function Assets:tilesetImage(tileset)
 end
 
 function Assets:tilesetRenderer(tileset, scale, layer)
-	return SpriteRenderer(self:tilesetImage(tileset), scale or 2, layer, self.outlineShader)
+	return SpriteRenderer(self:tilesetImage(tileset), scale or 2, layer,
+		self.outlineShader, self.sweepOutlineShader)
 end
 
 function Assets:tileAnimation(tileX, tileY)
@@ -113,7 +134,8 @@ function Assets:mapTileAt(tileset, sourceX, sourceY)
 end
 
 function Assets:playerRenderer(scale, layer)
-    return SpriteRenderer(self.players, scale or 2.25, layer or 3, self.outlineShader)
+    return SpriteRenderer(self.players, scale or 2.25, layer or 3,
+		self.outlineShader, self.sweepOutlineShader)
 end
 
 return Assets
